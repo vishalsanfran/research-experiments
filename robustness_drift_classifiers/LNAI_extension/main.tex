@@ -320,9 +320,25 @@ All features are z-score normalised using training-set statistics.
 We evaluate three classifiers: an MLP with two hidden layers (64, 32 units, ReLU,
 Adam, 20 epochs), a Random Forest (100 trees, max depth 8), and XGBoost
 (100 trees, max depth 5, learning rate 0.05).  All models use fixed random seeds
-for reproducibility.
+for reproducibility.  SHAP attributions for tree models are computed exactly via
+TreeSHAP~\cite{lundberg2020treeshap}.  For the MLP, KernelSHAP is used with a
+background dataset of 100 training samples and \texttt{nsamples}\,=\,200
+integration samples per explanation.  The MLP is not evaluated on NF-ToN-IoT;
+the gradient-based white-box attacks (FGSM, PGD) require the full test set
+for reliable RI estimation, and the larger NF-ToN-IoT test split combined with
+CPU-only evaluation made this computationally infeasible within our budget.
 
 \paragraph{Attack evaluation protocol.}
+We use $\varepsilon_{\max} = 0.30$.  On z-score normalised features
+(mean\,0, std\,1), this corresponds to a maximum perturbation of 0.3 standard
+deviations per feature---large enough to stress-test classifier boundaries and
+expose RI differences between attack methods, yet small enough that most features
+remain within one standard deviation of their clean values.  We confirmed that
+accuracy under the strongest attack (Square Attack) has largely plateaued at
+$\varepsilon = 0.30$; extending to larger budgets would not materially change
+the RI ranking.  Note that RI values are comparable only at the same
+$\varepsilon_{\max}$; comparisons with studies using different budgets require
+re-normalisation.
 Perturbation budgets $\varepsilon \in \{0, 0.033, 0.067, \ldots, 0.30\}$ (10
 values).  FGSM and PGD are applied to the MLP on the full test set.  Black-box
 attacks (ZOO, Square Attack, HopSkipJump) are applied to RF and XGBoost on a
@@ -474,10 +490,31 @@ boundaries; ZOO achieves RI\,=\,0.915 against RF on Phishing.
 \paragraph{Square Attack reveals true vulnerability.}
 Under Square Attack, XGBoost RI drops to 0.362 (Phishing) and 0.636 (UNSW-NB15),
 an average gap of 0.50 versus ZOO.  Random Forest RI drops to 0.793 and 0.502
-respectively.  \Cref{fig:attack_comparison} shows the accuracy--$\varepsilon$
-curves for all attack methods.  This demonstrates that attack-method selection
-is not model-agnostic: a study using only ZOO would incorrectly conclude that
-XGBoost is highly robust.
+respectively---a swing of 0.29 across the two datasets, indicating that RF
+robustness under Square Attack is substantially more dataset-dependent than
+XGBoost's (gap of 0.27).  The UNSW-NB15 feature space, with its mix of
+categorical and continuous network-flow attributes, may admit denser adversarial
+regions that Square Attack exploits more efficiently.  \Cref{fig:attack_comparison}
+shows the accuracy--$\varepsilon$ curves for all attack methods.  This
+demonstrates that attack-method selection is not model-agnostic: a study using
+only ZOO would incorrectly conclude that XGBoost is highly robust.
+
+\paragraph{HopSkipJump: boundary-based attack.}
+HopSkipJump (HSJ) uses only hard-label decisions and avoids finite-difference
+gradient estimation, so it does not suffer ZOO degeneracy.  Correspondingly,
+HSJ RI for XGBoost drops to 0.653 (Phishing) and 0.715 (UNSW-NB15), well below
+ZOO's inflated values---confirming that the ZOO failure is specific to gradient
+estimation rather than to query-based attacks in general.  Nevertheless, HSJ
+remains weaker than Square Attack on XGBoost (RI gaps of 0.29 and 0.08
+respectively), because the 8-iteration, 20-sample Monte Carlo boundary search
+is query-constrained in 48- and 40-dimensional feature spaces.  Against RF, the
+picture differs by dataset: HSJ and Square Attack are within 0.01 on Phishing
+(0.805 vs.\ 0.793), but on UNSW-NB15 Square Attack is substantially stronger
+(0.502 vs.\ 0.875 for HSJ), suggesting that random square perturbations
+navigate the RF decision boundary in the UNSW-NB15 feature space more effectively
+than boundary-directed binary search at this query budget.  HSJ was evaluated on
+120 samples versus 300 for other attacks due to its query cost, so RI values are
+not strictly comparable across methods.
 
 \paragraph{Prediction robustness vs.\ explanation stability.}
 Although XGBoost's RI under ZOO appears high (an artefact of ZOO degeneracy
@@ -589,7 +626,12 @@ explanation stability are distinct axes that must be measured separately.
 
 Table~\ref{tab:master} includes results for NF-ToN-IoT.  Both RF and XGBoost
 achieve 0.998 clean accuracy on this dataset, consistent with its highly separable
-NetFlow feature structure.
+NetFlow feature structure.  We note that near-perfect clean accuracy on a
+sampled subset warrants caution: it could reflect genuine class separability in
+NetFlow~v2 features, or it could indicate overfitting to the 40{,}000-sample
+stratified subset or feature leakage from NetFlow-derived fields that encode
+near-ground-truth labels.  We report these results as-is and flag this as a
+direction for further dataset validation.
 
 A notable departure from Phishing and UNSW-NB15 is that ZOO RI for RF drops to
 0.679 on NF-ToN-IoT, significantly lower than on the other datasets (0.915,
@@ -602,8 +644,17 @@ is a function of both model architecture and feature space geometry.
 XGBoost ZOO RI remains high at 0.973, confirming that the piecewise-constant
 prediction surface of boosted trees dominates regardless of dimensionality.
 Square Attack reduces both models to near-random (RI\,$\approx$\,0.46--0.48),
-consistent with prior datasets.  ESI for RF (0.214) is between Phishing (0.287)
-and UNSW-NB15 (0.167); XGBoost ESI (0.159) follows the same cross-dataset pattern.
+consistent with prior datasets.
+
+HopSkipJump achieves RI of 0.517~(RF) and 0.516~(XGB) on NF-ToN-IoT, converging
+much closer to Square Attack than on the higher-dimensional Phishing and UNSW-NB15
+datasets.  This convergence supports the interpretation that lower feature
+dimensionality makes boundary search more tractable: with only 10 features,
+HSJ's binary-search-and-gradient-estimate loop explores a substantially smaller
+volume, approaching the effectiveness of Square Attack's random search.
+
+ESI for RF (0.214) is between Phishing (0.287) and UNSW-NB15 (0.167);
+XGBoost ESI (0.159) follows the same cross-dataset pattern.
 
 \Cref{fig:toniot} shows the robustness curves for both models on NF-ToN-IoT.
 
@@ -613,8 +664,10 @@ and UNSW-NB15 (0.167); XGBoost ESI (0.159) follows the same cross-dataset patter
     alt={Line plots showing adversarial robustness curves for Random Forest and XGBoost on the NF-ToN-IoT dataset under ZOO, Square Attack, and HopSkipJump attacks. Random Forest ZOO accuracy degrades more steeply than on other datasets (Robustness Index 0.679) due to the lower 10-feature dimensionality improving ZOO gradient estimates. XGBoost ZOO remains near-perfect. Square Attack reduces both models to near-random accuracy.}
   ]{../figures/toniot_robustness_curves.png}
   \caption{Adversarial robustness curves for RF and XGBoost on NF-ToN-IoT.
-  ZOO is partially effective against RF (lower RI than other datasets) due to
-  the lower feature dimensionality improving gradient estimate quality.}
+  ZOO is partially effective against RF due to the lower dimensionality improving
+  gradient estimates.  HopSkipJump converges close to Square Attack on both
+  models (RI gap $\leq$\,0.06), unlike higher-dimensional datasets where the
+  gap exceeds 0.20.}
   \label{fig:toniot}
 \end{figure}
 
@@ -699,15 +752,25 @@ independently actionable: some are deterministically derived from others (e.g.\
 packet counts constrain byte counts), meaning unconstrained $L_\infty$ perturbations
 may generate invalid feature combinations.
 
-Our results suggest that this validity concern is more severe for gradient-based
-attacks than for score-based attacks.  FGSM and PGD perturb all features
-simultaneously in the gradient direction, producing combinations that may violate
-network protocol constraints.  Square Attack, by contrast, perturbs random
-subsets of features, and HopSkipJump searches for the nearest decision boundary,
-both of which are more likely to preserve feature correlations.  The lower RI
-values under Square Attack and HopSkipJump relative to ZOO may therefore partly
-reflect attacks that stay closer to the feasible feature manifold, suggesting
-these are more realistic threat models for operational cybersecurity evaluation.
+All five attacks in this study apply unconstrained $\ell_\infty$ perturbations
+without enforcing domain-specific feature validity.  Realism is not a function
+of attack sparsity or perturbation structure: Square Attack's random square-shaped
+patches do not, by construction, preserve semantic constraints any more than FGSM
+or ZOO do.  The lower RI values under Square Attack and HopSkipJump relative to
+ZOO reflect differences in \emph{attack effectiveness}---principally the ZOO
+degeneracy artefact---not differences in how closely the perturbations respect
+the feature manifold.
+
+A genuine realism argument for tabular security data requires distinguishing
+attacker-controllable features from derived or protocol-constrained ones.  In
+phishing detection most URL-structure features are directly under the attacker's
+control (the attacker constructs the phishing page), which provides a reasonable
+basis for unconstrained perturbations.  In network intrusion detection, however,
+some NetFlow features are deterministic functions of others (packet counts
+constrain byte-per-packet ratios), so any perturbation that violates these
+constraints produces records no real flow could generate.  Making the attack
+protocol domain-realistic requires projecting perturbations onto the manifold of
+valid network records---a direction left for future work~\cite{apruzzese2022modeling}.
 
 \subsection{ESI as a Complement to RI}
 
