@@ -1,5 +1,7 @@
 # Adversarial Robustness and Explainability Drift in Cybersecurity Classifiers
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.XXXXXXX.svg)](https://doi.org/10.5281/zenodo.XXXXXXX)
+
 Experimental code for the paper series:
 
 | Version | Venue | Citation |
@@ -49,9 +51,10 @@ two metrics:
   ```
 
 **Key finding:** XGBoost shows near-perfect prediction robustness under ZOO
-(RI ≈ 0.98) but very low explanation stability (ESI ≈ 0.06–0.11). Prediction
-robustness and explanation stability are decoupled — a high RI does not imply
-trustworthy explanations under attack.
+(RI ≈ 0.98) but very low explanation stability (ESI ≈ 0.06–0.11).
+Prediction robustness and explanation stability are decoupled.
+
+![Master heatmap — RI and ESI across all models and datasets](figures/master_heatmap.png)
 
 ---
 
@@ -64,6 +67,42 @@ trustworthy explanations under attack.
 | `robustness_tree_attacks_comparison.ipynb` | Square Attack & HopSkipJump vs ZOO on tree models. ZOO degeneracy analysis. |
 | `robustness_toniot.ipynb` | Third dataset (NF-ToN-IoT) — RF & XGBoost with all three black-box attacks + ESI. |
 | `robustness_pgd_ablation.ipynb` | PGD step-size ablation — explains why PGD < FGSM on z-score normalised tabular data. |
+
+---
+
+## Key Results
+
+### Attack-Method Sensitivity: ZOO vs Square Attack
+
+XGBoost appears robust under ZOO (RI = 0.98) but is highly vulnerable under
+Square Attack (RI = 0.36 on Phishing). The gap exposes a methodological risk:
+**attack-method selection is not model-agnostic**.
+
+![ZOO degeneracy on XGBoost](figures/xgb_attack_degeneracy.png)
+
+### PGD Step-Size Ablation
+
+PGD with the conventional step size (α = 0.01) is systematically weaker than
+FGSM on z-score normalised tabular data. The gap closes only at α ≥ 0.05,
+confirming the effect is a hyperparameter sensitivity artifact.
+
+![PGD step-size ablation](figures/pgd_alpha_ablation_curves.png)
+
+### Full Results Table
+
+| Dataset | Model | Clean Acc | RI ZOO/FGSM | RI Square | RI HSJ | ESI |
+|---------|-------|-----------|-------------|-----------|--------|-----|
+| Phishing | MLP | 0.857 | 0.610 | — | — | — |
+| Phishing | RF | 0.977 | 0.915 | 0.793 | 0.805 | 0.287 |
+| Phishing | XGB | 0.981 | 0.980 | 0.362 | 0.653 | 0.111 |
+| UNSW-NB15 | MLP | 0.774 | 0.692 | — | — | — |
+| UNSW-NB15 | RF | 0.998 | 0.949 | 0.502 | 0.875 | 0.167 |
+| UNSW-NB15 | XGB | 0.999 | 0.992 | 0.636 | 0.715 | 0.063 |
+| NF-ToN-IoT | RF | 0.998 | 0.679 | 0.482 | 0.517 | 0.214 |
+| NF-ToN-IoT | XGB | 0.998 | 0.973 | 0.460 | 0.516 | 0.159 |
+
+MLP: white-box (FGSM/PGD). RF/XGB: black-box (ZOO, Square Attack, HopSkipJump).
+ESI via TreeSHAP for tree models.
 
 ---
 
@@ -84,52 +123,15 @@ Requires a `~/.kaggle/kaggle.json` API token.
 ## Setup
 
 ```bash
-# Create virtual environment (from parent directory or here)
 python3 -m venv .venv
 source .venv/bin/activate
-
-# Install dependencies
 pip install -r requirements.txt
 pip install xgboost pyarrow
-
-# Launch Jupyter
 jupyter notebook
 ```
 
-Run notebooks in order: base study → extension → attack comparison → ToN-IoT → PGD ablation.
-
----
-
-## Results Summary
-
-### Robustness Index (RI) and ESI — All Models and Datasets
-
-| Dataset | Model | Clean Acc | RI ZOO/FGSM | RI Square | RI HSJ | ESI |
-|---------|-------|-----------|-------------|-----------|--------|-----|
-| Phishing | MLP | 0.857 | 0.610 | — | — | — |
-| Phishing | RF | 0.977 | 0.915 | 0.793 | 0.805 | 0.287 |
-| Phishing | XGB | 0.981 | 0.980 | 0.362 | 0.653 | 0.111 |
-| UNSW-NB15 | MLP | 0.774 | 0.692 | — | — | — |
-| UNSW-NB15 | RF | 0.998 | 0.949 | 0.502 | 0.875 | 0.167 |
-| UNSW-NB15 | XGB | 0.999 | 0.992 | 0.636 | 0.715 | 0.063 |
-| NF-ToN-IoT | RF | 0.998 | 0.679 | 0.482 | 0.517 | 0.214 |
-| NF-ToN-IoT | XGB | 0.998 | 0.973 | 0.460 | 0.516 | 0.159 |
-
-MLP evaluated with FGSM/PGD (white-box); RF/XGB evaluated with ZOO, Square Attack,
-and HopSkipJump (black-box). ESI computed via TreeSHAP for tree models.
-
-### PGD Step-Size Ablation (Phishing, MLP)
-
-| Attack | α | RI |
-|--------|---|----|
-| FGSM | — | 0.677 |
-| PGD | 0.005 | 0.891 |
-| PGD | 0.010 | 0.819 |
-| PGD | 0.050 | 0.651 |
-| PGD | 0.100 | 0.649 |
-
-PGD with the conventional step size (α = ε/steps = 0.01) is systematically weaker
-than FGSM on z-score normalised tabular data. The gap closes only at α ≥ 0.05.
+Run notebooks in order: `robustness_study` → `robustness_study_extension` →
+`robustness_tree_attacks_comparison` → `robustness_toniot` → `robustness_pgd_ablation`.
 
 ---
 
@@ -137,13 +139,13 @@ than FGSM on z-score normalised tabular data. The gap closes only at α ≥ 0.05
 
 ```
 robustness_drift_classifiers/
-  *.ipynb                        — experiment notebooks
-  *.png                          — generated figures
-  master_robustness_table.csv    — full 3-dataset results table
-  pgd_ablation_table.csv         — PGD step-size ablation results
-  requirements.txt               — Python dependencies
-  SCITEPRESS_robustness_cybersec/ — LaTeX source (ICAART 2026 version)
-  .gitignore                     — excludes datasets and .venv
+  *.ipynb                          — experiment notebooks
+  figures/                         — generated figures
+  master_robustness_table.csv      — full 3-dataset results
+  pgd_ablation_table.csv           — PGD step-size ablation results
+  requirements.txt
+  SCITEPRESS_robustness_cybersec/  — LaTeX source (ICAART 2026)
+  .gitignore                       — excludes datasets and .venv
 ```
 
 ---

@@ -1,0 +1,45 @@
+{
+  "title": "Adversarial Robustness and Explainability Drift in Cybersecurity Classifiers — Experiment Code",
+  "description": "Reproducible experiment code for the ICAART 2026 paper and LNCS extension: 'Empirical Analysis of Adversarial Robustness and Explainability Drift in Cybersecurity Classifiers'. Includes Jupyter notebooks evaluating MLP, Random Forest, and XGBoost under FGSM, PGD, ZOO, Square Attack, and HopSkipJump adversarial attacks across three cybersecurity datasets (Phishing URL, UNSW-NB15, NF-ToN-IoT). Introduces the Explainability Stability Index (ESI) via TreeSHAP drift analysis.",
+  "creators": [
+    {
+      "name": "Rajhans, Mona",
+      "affiliation": "Palo Alto Networks"
+    },
+    {
+      "name": "Khawarey, Vishal",
+      "affiliation": "Quicken Inc."
+    }
+  ],
+  "keywords": [
+    "adversarial robustness",
+    "explainability drift",
+    "SHAP",
+    "TreeSHAP",
+    "cybersecurity",
+    "intrusion detection",
+    "phishing detection",
+    "XGBoost",
+    "random forest",
+    "FGSM",
+    "PGD",
+    "Square Attack",
+    "HopSkipJump",
+    "ZOO attack",
+    "explainability stability index",
+    "tabular data",
+    "machine learning security"
+  ],
+  "license": "MIT",
+  "upload_type": "software",
+  "related_identifiers": [
+    {
+      "identifier": "10.5220/0014360100004052",
+      "relation": "isSupplementTo",
+      "scheme": "doi"
+    }
+  ],
+  "communities": [
+    {"identifier": "zenodo"}
+  ]
+}
