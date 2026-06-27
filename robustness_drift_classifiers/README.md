@@ -7,7 +7,7 @@ Experimental code for the paper series:
 | Version | Venue | Citation |
 |---------|-------|----------|
 | Conference | ICAART 2026 | Rajhans & Khawarey (2026), pp. 3101–3108, SciTePress. DOI: [10.5220/0014360100004052](https://doi.org/10.5220/0014360100004052) |
-| Extended | LNCS/LNAI (in preparation) | — |
+| Extended | LNAI (in preparation) | — |
 
 **Authors:** Mona Rajhans (Palo Alto Networks) · Vishal Khawarey (Quicken Inc.)
 
