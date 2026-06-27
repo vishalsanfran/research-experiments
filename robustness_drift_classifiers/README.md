@@ -67,6 +67,7 @@ Prediction robustness and explanation stability are decoupled.
 | `robustness_tree_attacks_comparison.ipynb` | Square Attack & HopSkipJump vs ZOO on tree models. ZOO degeneracy analysis. |
 | `robustness_toniot.ipynb` | Third dataset (NF-ToN-IoT) — RF & XGBoost with all three black-box attacks + ESI. |
 | `robustness_pgd_ablation.ipynb` | PGD step-size ablation — explains why PGD < FGSM on z-score normalised tabular data. |
+| `esi_square_attack_phishing.ipynb` | Focused experiment: ESI under Square Attack vs ZOO on Phishing RF & XGBoost. Addresses the ZOO-confound caveat in §9.2 of the LNAI paper. |
 
 ---
 
@@ -123,15 +124,28 @@ Requires a `~/.kaggle/kaggle.json` API token.
 ## Setup
 
 ```bash
+make venv     # create .venv and install all dependencies (includes kaggle CLI)
+make data     # download datasets via Kaggle CLI (requires ~/.kaggle/kaggle.json)
+make notebook # launch Jupyter from this directory
+```
+
+Or manually:
+
+```bash
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-pip install xgboost pyarrow
 jupyter notebook
 ```
 
+**Kaggle API token:** create one at [kaggle.com/settings](https://www.kaggle.com/settings)
+and save it to `~/.kaggle/kaggle.json` before running `make data`.
+
 Run notebooks in order: `robustness_study` → `robustness_study_extension` →
 `robustness_tree_attacks_comparison` → `robustness_toniot` → `robustness_pgd_ablation`.
+
+The focused experiment notebook `esi_square_attack_phishing.ipynb` can be run
+independently — it only requires the Phishing dataset and re-trains its own models.
 
 ---
 
@@ -143,8 +157,10 @@ robustness_drift_classifiers/
   figures/                         — generated figures
   master_robustness_table.csv      — full 3-dataset results
   pgd_ablation_table.csv           — PGD step-size ablation results
-  requirements.txt
+  requirements.txt                 — Python dependencies
+  Makefile                         — venv, data download, notebook targets
   SCITEPRESS_robustness_cybersec/  — LaTeX source (ICAART 2026)
+  LNAI_extension/                  — LaTeX source (LNAI extended version)
   .gitignore                       — excludes datasets and .venv
 ```
 
