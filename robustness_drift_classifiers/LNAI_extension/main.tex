@@ -4,6 +4,7 @@
 \usepackage[T1]{fontenc}
 \usepackage{graphicx}
 \graphicspath{{../figures/}{figures/}}
+\let\vec\relax
 \usepackage{amsmath,amssymb}
 \usepackage{booktabs}
 \usepackage{multirow}
@@ -47,14 +48,18 @@ Beyond gradient-based attacks~(FGSM, PGD), we evaluate three black-box attack
 methods~(ZOO, Square Attack, HopSkipJump) applicable to non-differentiable tree
 models.  We introduce the \emph{Explainability Stability Index}~(ESI), a scalar
 metric computed from TreeSHAP attribution drift that measures how stable a
-model's explanations remain under adversarial perturbation.  Our key finding is
-that prediction robustness and explanation stability are \emph{decoupled}:
-XGBoost achieves near-perfect robustness under ZOO~(RI\,$\approx$\,0.98) yet
-exhibits very low explanation stability~(ESI\,$\approx$\,0.06--0.11).
-We further show that ZOO produces degenerate gradient estimates against XGBoost,
-and that attack-method selection is not model-agnostic---Square Attack reveals
-vulnerability hidden by ZOO.  A step-size ablation for PGD explains a previously
-unreported anomaly on normalised tabular data.  Experiment code and result tables
+model's explanations remain under adversarial perturbation.  A key finding
+is that gradient-based black-box attacks (ZOO) produce degenerate results against
+XGBoost: apparent near-perfect robustness~(RI\,$\approx$\,0.98) is an artefact of
+piecewise-constant prediction surfaces, while score-based Square Attack reveals
+genuine vulnerability~(RI\,$\approx$\,0.36).  Crucially, even the degenerate ZOO
+perturbations, though insufficient to cause mis\-classification, still cause
+substantial attribution drift: XGBoost ESI falls to $0.06$--$0.11$, nearly
+three times lower than for Random Forest ($0.17$--$0.29$).
+This shows that prediction robustness and explanation stability are
+\emph{distinct axes} requiring joint measurement, and that attack-method
+selection critically shapes which axis is exposed.  A step-size ablation for PGD explains a counter\-intuitive
+anomaly on z-score normalised tabular data.  Experiment code and result tables
 are publicly available~\cite{khawarey2026code}.
 
 \keywords{Adversarial robustness \and Explainability drift \and SHAP \and
@@ -67,14 +72,13 @@ Random Forest \and Black-box attacks \and Explainability Stability Index}
 \label{sec:intro}
 % ══════════════════════════════════════════════════════════════════════════════
 
-Machine learning classifiers are widely deployed in cybersecurity pipelines---for
-phishing URL detection, network intrusion detection, and IoT anomaly
-detection---where both accurate predictions and trustworthy explanations are
-required for operational use.  Adversarial attacks, which apply small deliberate
+Machine learning classifiers are widely deployed in cybersecurity
+pipelines for phishing URL detection, network intrusion detection, and IoT
+anomaly detection, where both accurate predictions and trustworthy explanations
+are required for operational use.  Adversarial attacks, which apply small deliberate
 perturbations to inputs to cause misclassification, pose a dual threat: they
-degrade prediction accuracy and, as we demonstrate here, simultaneously destabilise
-the SHAP-based explanations that security analysts rely on to understand model
-decisions.
+degrade prediction accuracy and simultaneously de\-sta\-bi\-lise the SHAP-based
+explanations that security analysts rely on to understand model decisions.
 
 Prior work on adversarial robustness has focused almost exclusively on image
 classifiers and gradient-based attacks~\cite{goodfellow2015explaining,madry2018towards},
@@ -102,10 +106,10 @@ Specifically, we make the following new contributions beyond~\cite{khawarey2026e
     computed from TreeSHAP drift, directly comparable to RI on the same scale.
   \item \textbf{Third dataset.}  NF-ToN-IoT is added as an IoT intrusion
     detection domain, providing cross-domain validation.
-  \item \textbf{ZOO degeneracy finding.}  We show empirically that ZOO produces
-    near-degenerate results on XGBoost (RI\,=\,0.97) due to its piecewise-constant
-    prediction surface, while Square Attack reveals genuine vulnerability
-    (RI\,=\,0.36), exposing a methodological risk in attack-method selection.
+  \item \textbf{ZOO degeneracy finding.}  ZOO produces near-degenerate results
+    on XGBoost (RI\,=\,0.97) due to its piece\-wise-constant prediction surface,
+    while Square Attack reveals genuine vulnerability (RI\,=\,0.36), exposing a
+    methodological risk in attack-method selection.
   \item \textbf{PGD step-size ablation.}  A controlled ablation confirms the
     PGD\,$<$\,FGSM anomaly is a hyperparameter sensitivity artifact on
     z-score normalised tabular data.
@@ -195,7 +199,7 @@ objectives~\cite{zhang2019theoretically,yang2020defending} target differentiable
 models, and the comparatively few studies of tree-ensemble robustness rarely
 evaluate black-box attacks across multiple security datasets or pair robustness
 with explanation stability.  Our extension addresses this gap by systematically
-attacking RF and XGBoost across three datasets and reporting RI and ESI jointly.
+attacking RF and XGBoost across three datasets and jointly reporting RI and ESI.
 
 % ══════════════════════════════════════════════════════════════════════════════
 \section{Problem Formulation and Metrics}
@@ -257,8 +261,13 @@ ESI is then:
 
 Normalising by $\bar{D}(\varepsilon_{\max})$ places ESI on the same $[0,1]$
 scale as RI.  Higher ESI indicates that explanations remain stable under attack.
+By construction, ESI\,=\,1 when inputs are unperturbed (the integrand is
+identically zero) and approaches 0 when drift reaches its maximum at all budgets,
+providing a natural calibration.
 For tree models, SHAP values are computed exactly via TreeSHAP~\cite{lundberg2020treeshap};
-for the MLP, a kernel approximation is used.
+for the MLP, KernelSHAP is used.  Because KernelSHAP and TreeSHAP have different
+variance and semantic grounding, cross-model ESI comparisons (MLP vs.\ trees)
+should be treated as indicative rather than precise.
 
 % ══════════════════════════════════════════════════════════════════════════════
 \section{Attack Methods}
@@ -318,7 +327,12 @@ Perturbation budgets $\varepsilon \in \{0, 0.033, 0.067, \ldots, 0.30\}$ (10
 values).  FGSM and PGD are applied to the MLP on the full test set.  Black-box
 attacks (ZOO, Square Attack, HopSkipJump) are applied to RF and XGBoost on a
 stratified subsample of 300 test examples (120 for HopSkipJump, which is
-query-intensive).  ESI is computed on a 256-sample stratified subset.
+query-intensive).  ESI is computed on a separate stratified 256-sample subset
+drawn from the same test split; the RI and ESI evaluation subsets are distinct
+but drawn from the same held-out data.
+All RI and ESI values are single-run point estimates under fixed random seeds.
+We do not report confidence intervals across seeds; see~\cref{sec:limitations}
+for discussion of this limitation.
 
 % ══════════════════════════════════════════════════════════════════════════════
 \section{Base Study: MLP under White-Box Attacks}
@@ -363,10 +377,10 @@ explanation instability are coupled.}
 range.  Rows correspond to increasing attack magnitude $\varepsilon$, columns to
 individual features, and colour intensity to the normalised change in SHAP value
 relative to the clean input.  Drift grows monotonically with $\varepsilon$ and
-concentrates in a small subset of features: URL-structure features such as
-\texttt{PctExtNullSelfRedirectHyperlinks} and \texttt{UrlLengthRT} show the
-highest drift on Phishing; \texttt{dttl} and \texttt{ct\_dst\_sport\_ltm} are
-the most drift-prone on UNSW-NB15.  Even modest perturbations can reorder the
+concentrates in a small subset of features.  URL-structure features such as
+\texttt{PctExt\-Null\-Self\-Redirect\-Hyperlinks} and \texttt{UrlLengthRT}
+show the highest drift on Phishing; on UNSW-NB15 the most drift-prone features
+are \texttt{dttl} and \texttt{ct\_dst\_sport\_ltm}.  Even modest perturbations can reorder the
 model's apparent reasoning while leaving its prediction nominally correct.
 
 \begin{figure}[t]
@@ -415,7 +429,9 @@ methods.  Key observations are discussed below.
 \caption{Robustness Index (RI) and Explainability Stability Index (ESI) across
 all models, datasets, and attack methods. Higher is better for all metrics.
 ``---'' indicates the attack is inapplicable to that model family.
-$^\dagger$FGSM/PGD for MLP; ZOO for tree models.}
+$^\dagger$FGSM/PGD for MLP; ZOO for tree models.  XGBoost ZOO RI\,$\approx$\,0.98
+is a degeneracy artefact; Square Attack RI reflects genuine vulnerability.
+ESI is computed from ZOO-perturbed inputs (see limitations, \cref{sec:limitations}).}
 \label{tab:master}
 \centering
 \small
@@ -464,12 +480,18 @@ is not model-agnostic: a study using only ZOO would incorrectly conclude that
 XGBoost is highly robust.
 
 \paragraph{Prediction robustness vs.\ explanation stability.}
-Despite XGBoost's high RI under ZOO, its ESI is consistently the lowest of the
-three models across all datasets (0.063--0.111 vs.\ RF's 0.167--0.287).  A model
-can maintain accurate predictions under attack while its feature attributions
-change substantially---a critical finding for security analysts who rely on
-explanations to investigate alerts.  \Cref{fig:master_heatmap} visualises this
-decoupling across all conditions.
+Although XGBoost's RI under ZOO appears high (an artefact of ZOO degeneracy
+rather than genuine robustness), its ESI is consistently the lowest of the three
+models across all datasets (0.063--0.111 vs.\ RF's 0.167--0.287;
+all values are point estimates from a single evaluation run).  This reveals
+a distinct phenomenon: the same ZOO perturbations that fail to cross XGBoost
+decision boundaries still cause substantial attribution drift.  In other words,
+an attack that is too weak to fool the classifier is not necessarily too weak to
+mislead the explanation---a finding with direct implications for SOC analysts who
+rely on SHAP attributions to triage alerts.  \Cref{fig:master_heatmap} visualises
+RI and ESI side-by-side across all conditions; note that the ZOO RI column for
+XGBoost reflects the degeneracy artefact and should be read against the Square
+Attack RI column for a fair robustness comparison.
 
 \begin{figure}[t]
   \centering
@@ -499,8 +521,10 @@ decoupling across all conditions.
     alt={Heatmap with models (MLP, Random Forest, XGBoost) on one axis and datasets (Phishing, UNSW-NB15, NF-ToN-IoT) combined with attack methods on the other. Cells show Robustness Index and Explainability Stability Index values. XGBoost shows near-perfect RI under ZOO (0.97 to 0.99) but consistently the lowest ESI (0.06 to 0.16), while Random Forest shows lower RI but higher ESI, illustrating the decoupling between prediction robustness and explanation stability.}
   ]{../figures/master_heatmap.png}
   \caption{RI and ESI heatmap across all three datasets and tree model families.
-  XGBoost consistently shows higher RI (under ZOO) but lower ESI than RF,
-  illustrating the prediction-robustness vs.\ explanation-stability decoupling.}
+  XGBoost ZOO RI\,$\approx$\,0.98 is an artefact of ZOO degeneracy (see
+  \cref{sec:trees}); Square Attack RI reveals genuine vulnerability.
+  Despite this, XGBoost ESI is consistently the lowest of the two tree models,
+  showing that even failed attacks can destabilise explanations.}
   \label{fig:master_heatmap}
 \end{figure}
 
@@ -541,10 +565,10 @@ The drift is far from uniform across feature types.  For the Phishing classifier
 instability concentrates in lexical and host-based URL features, which take a wide
 range of values and therefore admit larger perturbations within the $\ell_\infty$
 budget.  The network datasets behave differently: in NF-ToN-IoT the flow
-features---\texttt{L4\_SRC\_PORT}, \texttt{L4\_DST\_PORT}, \texttt{PROTOCOL},
+features (\texttt{L4\_SRC\_PORT}, \texttt{L4\_DST\_PORT}, \texttt{PROTOCOL},
 \texttt{L7\_PROTO}, \texttt{IN\_BYTES}, \texttt{OUT\_BYTES}, \texttt{IN\_PKTS},
-\texttt{OUT\_PKTS}, \texttt{TCP\_FLAGS}, and
-\texttt{FLOW\_DURATION\_MILLISECONDS}---include both volumetric counters and
+\texttt{OUT\_PKTS}, \texttt{TCP\_FLAGS}, \texttt{FLOW\_DU\-RA\-TION\_MIL\-LI\-SE\-CONDS})
+include both volumetric counters and
 categorical protocol identifiers, and drift accumulates on the high-variance byte
 and packet counters rather than on the discrete protocol fields.
 
@@ -604,9 +628,9 @@ higher RI than FGSM---i.e., PGD is a \emph{weaker} attack---on both datasets.
 Reviewer feedback identified this as counterintuitive, since PGD is an iterative
 refinement of FGSM that should find stronger adversarial examples.
 
-We resolve this by an ablation over PGD step sizes $\alpha \in \{0.005, 0.01,
-0.02, 0.05, 0.10\}$ with fixed 10 steps, shown in \Cref{tab:pgd_ablation} and
-\Cref{fig:pgd_ablation}.
+We resolve this by an ablation over five step sizes
+$\alpha \in \{0.005,\allowbreak\,0.01,\allowbreak\,0.02,\allowbreak\,0.05,\allowbreak\,0.10\}$
+with 10 fixed steps, shown in \Cref{tab:pgd_ablation} and \Cref{fig:pgd_ablation}.
 
 \begin{table}[t]
 \caption{PGD step-size ablation: Robustness Index (RI) on Phishing and UNSW-NB15
@@ -710,20 +734,23 @@ adversary.
 The cross-dataset behaviour of ESI supports its use as a model-selection
 criterion.  Across all three datasets, XGBoost records a lower ESI than the
 Random Forest ($0.111$ vs.\ $0.287$ on Phishing, $0.063$ vs.\ $0.167$ on
-UNSW-NB15, $0.159$ vs.\ $0.214$ on NF-ToN-IoT).  This consistent ordering,
-despite very different feature spaces and class balances, indicates that ESI
-captures an architectural property of the boosted ensemble rather than
-dataset-specific noise---a prerequisite for any metric intended to guide model
-choice.
+UNSW-NB15, $0.159$ vs.\ $0.214$ on NF-ToN-IoT).  This consistent ordering, despite very different feature spaces and class balances,
+\emph{suggests} that ESI may reflect an architectural tendency of the boosted
+ensemble rather than dataset-specific noise.  Confirming this as a general property
+would require evaluation across a broader range of datasets and hyperparameter
+configurations; we treat the three-dataset pattern as a preliminary signal rather
+than a definitive claim.
 
-The practical implication for security operations is direct.  A model with high
-RI but low ESI is operationally hazardous: it continues to raise correct,
-confident alerts under adversarial conditions, yet the explanations it presents
-to a SOC analyst become unstable and misleading.  An analyst triaging such alerts
+The practical implication for security operations is direct.  A model whose
+predictions appear stable under some attack (whether genuinely or as an
+artefact of attack degeneracy) but whose ESI is low is operationally hazardous:
+the explanations it presents to a SOC analyst become unstable and misleading
+even as the predicted label remains correct.  An analyst triaging such alerts
 may be steered toward the wrong features and the wrong remediation, eroding trust
 in the very explanations meant to support the decision.  Reporting RI and ESI
-jointly lets practitioners avoid deploying models that are robust in label but
-fragile in rationale.  Future work will extend ESI beyond SHAP to
+jointly---and under multiple attack methods to avoid degeneracy artefacts---lets
+practitioners avoid deploying models that are robust in label but fragile in
+rationale.  Future work will extend ESI beyond SHAP to
 LIME~\cite{ribeiro2016lime} attributions, enabling explanation-stability
 comparisons across interpretation methods as well as across models.
 
@@ -759,6 +786,18 @@ ZOO iterations to keep evaluation tractable.  A GPU-based evaluation would permi
 larger query budgets and more iterations, likely yielding lower RI values and thus
 exposing stronger vulnerabilities than those reported here.
 
+\paragraph{Variance and statistical significance.}
+All reported RI and ESI values are single-run point estimates computed under fixed
+random seeds on subsets of 256--300 test examples.  We do not report bootstrap
+confidence intervals or variance across random initialisations.  For comparisons
+with large effect sizes---such as XGBoost ZOO\,RI\,$\approx$\,0.98 versus Square
+Attack\,RI\,$\approx$\,0.36---the ordering is unlikely to reverse under repeated
+evaluation.  For closer comparisons, such as RF versus XGBoost ESI on
+NF-ToN-IoT ($0.214$ vs.\ $0.159$), confidence intervals could overlap and the
+ordering should be treated as preliminary.  Future work should estimate bootstrap
+CIs and report variance across multiple random seeds to allow proper significance
+testing.
+
 \paragraph{ESI approximation.}
 For tree models we compute ESI using ZOO-perturbed inputs, which is convenient
 because ZOO produces smoothly increasing perturbations at each $\varepsilon$
@@ -782,9 +821,14 @@ Three findings stand out.  First, ZOO produces degenerate gradient estimates
 against XGBoost, inflating apparent robustness; Square Attack reveals genuine
 vulnerability with a RI gap of up to 0.64 on the same model.  This shows that
 attack-method selection is not model-agnostic and that gradient-based black-box
-attacks are insufficient for evaluating tree ensembles.  Second, prediction
-robustness and explanation stability are decoupled: XGBoost is highly robust by
-RI but poorly stable by ESI, while RF shows the opposite balance.  Third, PGD
+attacks are insufficient for evaluating tree ensembles.  Second, RI and ESI measure orthogonal properties: ZOO perturbations that fail
+to fool XGBoost predictions (artefact RI\,$\approx$\,0.98) still drive large
+attribution drift (ESI\,$\approx$\,0.06--0.11), demonstrating that an attack
+too weak to cause misclassification can nonetheless destabilise explanations.
+Across model families, RF consistently achieves higher ESI than XGBoost despite
+comparable RI under genuine attacks (Square Attack)---a pattern consistent across
+all three datasets, though without bootstrap confidence intervals we treat it as
+a preliminary signal warranting further study.  Third, PGD
 underperforms FGSM on z-score normalised tabular data when the conventional step
 size $\alpha=0.01$ is used, an artifact explained by iterative $L_\infty$
 projection cancelling gradient accumulation.
