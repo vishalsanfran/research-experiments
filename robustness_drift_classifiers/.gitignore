@@ -1,0 +1,11 @@
+# Datasets — download separately (see README)
+*.csv
+*.parquet
+*.zip
+
+# Python environment
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.ipynb_checkpoints/

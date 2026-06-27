@@ -1,0 +1,7 @@
+Dataset,Model,RI (ZOO/FGSM),RI (best attack),Best attack type
+Phishing,MLP,0.857,0.61,FGSM/PGD
+Phishing,RF,0.915,0.793,Square/HSJ
+Phishing,XGBoost,0.98,0.362,Square/HSJ
+UNSW-NB15,MLP,0.774,0.692,FGSM/PGD
+UNSW-NB15,RF,0.949,0.502,Square/HSJ
+UNSW-NB15,XGBoost,0.992,0.636,Square/HSJ
