@@ -309,8 +309,14 @@ step via Monte Carlo sampling.  We use 8 iterations with 20 gradient samples.
 Three tabular cybersecurity datasets are used.
 \textit{Phishing URL}~\cite{phishing_kaggle}: 10{,}000 samples, 48 binary/ternary
 URL-structure features, balanced classes.
-\textit{UNSW-NB15}~\cite{moustafa2015unsw}: 175{,}341 network flow records, 40
-features (categorical encoded), binary normal/attack label.
+\textit{UNSW-NB15}~\cite{moustafa2015unsw}: we use the official
+\texttt{UNSW\_NB15\_training-set.csv} partition (82{,}332 records), which
+contains 45 columns; we drop \texttt{attack\_cat} (multi-class label not used)
+and encode the three string-typed fields (\texttt{proto}, \texttt{service},
+\texttt{state}) with \texttt{LabelEncoder}, yielding 43 numeric features and a
+binary \texttt{label} target.  The full UNSW-NB15 corpus comprises 175{,}341
+records across all partitions; we use only the training partition and apply an
+80/20 train/test split.
 \textit{NF-ToN-IoT}~\cite{sarhan2021nftoniot}: 1{,}157{,}994 NetFlow~v2 records,
 10 features; we sample 20{,}000 benign and 20{,}000 attack flows using stratified
 batch streaming to avoid loading the full file into memory.
@@ -635,11 +641,14 @@ direction for further dataset validation.
 
 A notable departure from Phishing and UNSW-NB15 is that ZOO RI for RF drops to
 0.679 on NF-ToN-IoT, significantly lower than on the other datasets (0.915,
-0.949).  We attribute this to the lower feature dimensionality of NF-ToN-IoT
-(10 features vs.\ 48 for Phishing): with fewer features, ZOO's finite-difference
-gradient estimates are more accurate, reducing the degeneracy effect.  This is a
-dimensionality-dependent result and provides further evidence that ZOO degeneracy
-is a function of both model architecture and feature space geometry.
+0.949).  One plausible explanation is the lower feature dimensionality of NF-ToN-IoT
+(10 features vs.\ 48 for Phishing and 40 for UNSW-NB15): with fewer features,
+ZOO's finite-difference gradient estimates sample a smaller coordinate space and
+may be more accurate, reducing the degeneracy.  However, the three datasets also
+differ in domain, feature-type distribution, and class separability, so
+dimensionality cannot be cleanly isolated as the cause without a controlled
+ablation that varies feature count within a single dataset.  We treat this as a
+plausible hypothesis consistent with the data rather than a confirmed finding.
 
 XGBoost ZOO RI remains high at 0.973, confirming that the piecewise-constant
 prediction surface of boosted trees dominates regardless of dimensionality.
@@ -817,6 +826,53 @@ rationale.  Future work will extend ESI beyond SHAP to
 LIME~\cite{ribeiro2016lime} attributions, enabling explanation-stability
 comparisons across interpretation methods as well as across models.
 
+\subsection{Attack-Method Selection Guidance}
+\label{sec:attack_guidance}
+
+The results across three datasets and two tree model families reveal a consistent
+ranking of attack strength that can be explained by two independent axes:
+\emph{gradient dependence} and \emph{query efficiency in high-dimensional spaces}.
+
+\paragraph{Gradient dependence.}
+ZOO's effectiveness is determined by the quality of its finite-difference
+gradient estimates, which in turn depends on model smoothness and feature
+dimensionality.  Against XGBoost, whose piecewise-constant prediction surface
+yields near-zero finite differences inside tree leaves, ZOO is essentially
+degenerate at all dimensionalities (RI\,=\,0.97--0.99 across all three datasets).
+Against Random Forest, whose ensemble averaging produces smoother decision
+boundaries, ZOO is partially effective but strongly dimensionality-dependent:
+RI drops from 0.949 (UNSW-NB15, 40 features) to 0.679 (NF-ToN-IoT, 10 features).
+Square Attack and HopSkipJump require no gradient information and are unaffected
+by this axis entirely.
+
+\paragraph{Query efficiency.}
+Given equivalent query budgets, Square Attack's random $\ell_\infty$ search
+outperforms HopSkipJump's boundary traversal in high-dimen\-sional feature spaces.
+The RI gap is largest for XGBoost on Phishing (Square Attack 0.36 vs.\ HSJ 0.65,
+a gap of 0.29) and closes at low dimensionality: on NF-ToN-IoT (10 features)
+both methods converge to RI\,$\approx$\,0.48--0.52 for both models.  This is
+consistent with boundary search being more adversely affected by dimensionality
+than random search.
+
+\paragraph{Practical recommendations.}
+These two axes suggest the following guidelines for adversarial evaluation of
+cybersecurity classifiers:
+\begin{itemize}
+  \item \textbf{Tree ensembles (XGBoost, RF):}  Square Attack should be the
+    primary benchmark.  ZOO alone is insufficient and can overestimate robustness
+    by up to 0.61 RI for XGBoost.  HopSkipJump provides useful complementary
+    evidence that the attack is decision-boundary-grounded, but requires a
+    larger query budget and may be weaker in high-dimensional feature spaces.
+  \item \textbf{MLP (white-box):}  FGSM or PGD with adaptive step size
+    ($\alpha = \varepsilon/\text{steps}$ per $\varepsilon$ value) should be
+    preferred over default PGD ($\alpha = 0.01$), which underperforms FGSM on
+    z-score normalised tabular data.
+  \item \textbf{Robustness reporting:}  Report RI under the \emph{strongest
+    available attack} as the primary robustness estimate.  Reporting ZOO RI
+    alongside Square Attack RI is useful to quantify the degeneracy gap, but
+    the headline figure should come from the stronger attack.
+\end{itemize}
+
 % ══════════════════════════════════════════════════════════════════════════════
 \section{Limitations}
 \label{sec:limitations}
@@ -847,7 +903,12 @@ All experiments run on CPU, which limits attack strength.  We cap HopSkipJump
 at $120$ samples, against $300$ for the other attacks, and restrict the number of
 ZOO iterations to keep evaluation tractable.  A GPU-based evaluation would permit
 larger query budgets and more iterations, likely yielding lower RI values and thus
-exposing stronger vulnerabilities than those reported here.
+exposing stronger vulnerabilities than those reported here.  In particular, ZOO
+degeneracy on XGBoost may be partly a budget artefact: with substantially more
+coordinate updates, ZOO might escape locally flat prediction regions and find
+effective perturbations.  Future work should re-examine ZOO degeneracy at higher
+query budgets to determine whether it is a fundamental consequence of the
+piecewise-constant prediction surface or a function of the iteration limit.
 
 \paragraph{Variance and statistical significance.}
 All reported RI and ESI values are single-run point estimates computed under fixed
@@ -860,6 +921,16 @@ NF-ToN-IoT ($0.214$ vs.\ $0.159$), confidence intervals could overlap and the
 ordering should be treated as preliminary.  Future work should estimate bootstrap
 CIs and report variance across multiple random seeds to allow proper significance
 testing.
+
+\paragraph{Tree ensemble defences.}
+This study evaluates adversarial attacks on tree ensembles but does not evaluate
+defences for them.  Standard adversarial training---augmenting the training set
+with gradient-crafted examples---does not directly apply to non-differentiable
+Random Forests and XGBoost models.  Tree-specific defence strategies such as
+feature-validity constraint projections~\cite{apruzzese2022modeling}, ensemble
+diversity maximisation, and adversarial purification via density estimators are
+active research directions beyond the scope of this empirical evaluation.
+Extending RI and ESI to assess such defences is a natural next step.
 
 \paragraph{ESI approximation.}
 For tree models we compute ESI using ZOO-perturbed inputs, which is convenient
