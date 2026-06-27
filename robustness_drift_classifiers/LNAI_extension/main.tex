@@ -3,17 +3,14 @@
 % ── Packages ───────────────────────────────────────────────────────────────────
 \usepackage[T1]{fontenc}
 \usepackage{graphicx}
+\graphicspath{{../figures/}{figures/}}
 \usepackage{amsmath,amssymb}
 \usepackage{booktabs}
 \usepackage{multirow}
 \usepackage{array}
 \usepackage{url}
 \usepackage{hyperref}
-\usepackage{xcolor}
 \usepackage[capitalise]{cleveref}
-
-% Convenience macro for TODO notes during drafting
-\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
 
 \begin{document}
 
@@ -23,8 +20,8 @@ Stability in Cybersecurity Classifiers}
 
 \titlerunning{Adversarial Robustness and Explainability Stability}
 
-\author{Mona Rajhans\inst{1} \and
-        Vishal Khawarey\inst{2}}
+\author{Mona Rajhans\inst{1}\orcidID{0009-0002-4921-2832}\thanks{Corresponding author} \and
+        Vishal Khawarey\inst{2}\orcidID{0009-0004-1714-9386}}
 
 \authorrunning{M. Rajhans and V. Khawarey}
 
@@ -32,7 +29,7 @@ Stability in Cybersecurity Classifiers}
            \email{mrajhans@paloaltonetworks.com}
            \and
            Quicken Inc., Menlo Park, CA, USA\\
-           \email{vishalkk@gmail.com}}
+           \email{vishal.sanfran@gmail.com}}
 
 \maketitle
 
@@ -124,6 +121,7 @@ The remainder of this paper is structured as follows.
 \Cref{sec:toniot} covers the NF-ToN-IoT dataset.
 \Cref{sec:pgd} presents the PGD ablation.
 \Cref{sec:discussion} discusses attack realism and ESI implications.
+\Cref{sec:limitations} discusses limitations and directions for future work.
 \Cref{sec:conclusion} concludes.
 
 % ══════════════════════════════════════════════════════════════════════════════
@@ -132,40 +130,72 @@ The remainder of this paper is structured as follows.
 % ══════════════════════════════════════════════════════════════════════════════
 
 \paragraph{Adversarial robustness.}
-Biggio et al.~\cite{biggio2013evasion} established the foundational evasion-attack
-framework for machine learning.  Goodfellow et al.~\cite{goodfellow2015explaining}
-introduced FGSM, and Madry et al.~\cite{madry2018towards} extended it to iterative
-PGD, now a standard robustness benchmark.  Carlini and
-Wagner~\cite{carlini2017towards} proposed optimisation-based attacks demonstrating
-limits of adversarial training.  Cohen et al.~\cite{cohen2019certified} introduced
-randomised smoothing for certified robustness.  Fawzi et
-al.~\cite{fawzi2018analysis} analysed theoretical robustness bounds.
+The vulnerability of neural classifiers to small, deliberately crafted input
+perturbations was first characterised through the fast gradient sign method
+(FGSM)~\cite{goodfellow2015explaining} and later strengthened into the projected
+gradient descent (PGD) attack, which Madry et al.~\cite{madry2018towards} framed
+as a saddle-point optimisation underpinning adversarial training.  The
+Carlini--Wagner formulation~\cite{carlini2017towards} demonstrated that many
+early defences offered only superficial robustness, and theoretical analyses
+related vulnerability to the geometry of decision boundaries and to the curvature
+of the loss surface~\cite{fawzi2018analysis}.  More recently, AutoAttack~\cite{croce2020autoattack}
+combined parameter-free white- and black-box attacks into a standardised ensemble
+for reliable robustness evaluation, exposing inflated robustness claims across
+the literature.  Cohen et al.~\cite{cohen2019certified} introduced randomised
+smoothing for certified probabilistic robustness guarantees.  A persistent
+limitation of this body of work is its concentration on image classification,
+where $\ell_p$ perturbation budgets correspond to perceptually meaningful
+constraints; the transfer of these assumptions to tabular and structured security
+data is rarely examined.
 
 \paragraph{Black-box attacks.}
-Chen et al.~\cite{chen2017zoo} introduced ZOO, which approximates gradients via
-finite differences without access to model internals.  Andriushchenko et
-al.~\cite{andriushchenko2020square} proposed Square Attack, a score-based method
-relying only on loss values.  Chen et al.~\cite{chen2020hopskipjump} proposed
-HopSkipJump, a decision-based attack requiring only predicted labels.
+When gradients are unavailable, as is the case for tree ensembles, attacks must
+operate through queries to the model.  ZOO~\cite{chen2017zoo} estimates gradients
+via finite differences, Square Attack~\cite{andriushchenko2020square} performs
+query-efficient random search within an $\ell_\infty$ ball, and
+HopSkipJump~\cite{chen2020hopskipjump} relies only on the model's hard-label
+decisions.  These methods differ sharply in query budget and in the perturbation
+structure they induce, which motivates evaluating them jointly rather than
+relying on a single attack.
 
 \paragraph{Adversarial attacks in cybersecurity.}
-Papernot et al.~\cite{papernot2016limitations} demonstrated adversarial
-vulnerability of deep networks in security settings.  Grosse et
-al.~\cite{grosse2017adversarial} applied adversarial perturbations to malware
-classifiers.  Yang et al.~\cite{yang2020defending} studied defence strategies
-for cybersecurity DNNs.  These works focus primarily on neural networks; tree
-ensemble robustness under black-box attacks remains less studied.
+Evasion attacks against machine-learning detectors were studied early by Biggio
+et al.~\cite{biggio2013evasion} and elaborated for malware and intrusion
+detection~\cite{papernot2016limitations,grosse2017adversarial}.  Yang et
+al.~\cite{yang2020defending} studied defence strategies for cybersecurity DNNs.
+Apruzzese et al.~\cite{apruzzese2022modeling} argue that much of this literature
+adopts threat models imported from computer vision that are unrealistic for
+network security, where an attacker faces strict feature-validity and protocol
+constraints.  This critique directly motivates our attention to structured-feature
+realism and our use of multiple attack families.
 
 \paragraph{Explainability and its stability.}
-Lundberg and Lee~\cite{lundberg2017unified} introduced SHAP as a unified
-attribution framework.  Lundberg et al.~\cite{lundberg2020treeshap} extended
-SHAP to tree models via TreeSHAP, enabling exact attributions.  Slack et
-al.~\cite{slack2020fooling} showed LIME and SHAP explanations can be manipulated
-by adversarial inputs, motivating quantitative stability measurement.
-Agarwal et al.~\cite{agarwal2022openxai} introduced OpenXAI with metrics
-including RIS and ROS for explanation faithfulness; our ESI is orthogonal,
-measuring explanation stability under adversarial drift rather than faithfulness
-to model internals.
+Post-hoc attribution methods such as SHAP~\cite{lundberg2017unified}, its
+tree-specialised variant TreeSHAP~\cite{lundberg2020treeshap}, and
+LIME~\cite{ribeiro2016lime} are now standard for interpreting security classifiers,
+yet their reliability under perturbation is contested.  Slack et
+al.~\cite{slack2020fooling} showed that SHAP and LIME explanations can be
+deliberately manipulated.  Evaluation frameworks such as
+OpenXAI~\cite{agarwal2022openxai} formalise relative input and output stability
+(RIS/ROS), but these quantify the \emph{faithfulness} and local Lipschitz
+behaviour of explanations rather than their behaviour under an adversary.
+Alvarez-Melis and Jaakkola~\cite{alvarezmelis2018robust} introduced sensitivity
+and infidelity measures that probe explanation stability against random or local
+input changes.  The distinction we draw is deliberate: the Explainability
+Stability Index (ESI) measures attribution drift specifically under adversarial
+perturbations of increasing magnitude, coupling the explanation-stability question
+to the same threat model used for the Robustness Index, rather than to generic
+noise or model-internal faithfulness.
+
+\paragraph{Tree ensemble robustness.}
+Despite the dominance of random forests and gradient-boosted trees in operational
+security pipelines, robustness research remains overwhelmingly focused on neural
+networks.  Certified-robustness work~\cite{cohen2019certified} and robust training
+objectives~\cite{zhang2019theoretically,yang2020defending} target differentiable
+models, and the comparatively few studies of tree-ensemble robustness rarely
+evaluate black-box attacks across multiple security datasets or pair robustness
+with explanation stability.  Our extension addresses this gap by systematically
+attacking RF and XGBoost across three datasets and reporting RI and ESI jointly.
 
 % ══════════════════════════════════════════════════════════════════════════════
 \section{Problem Formulation and Metrics}
@@ -295,23 +325,81 @@ query-intensive).  ESI is computed on a 256-sample stratified subset.
 \label{sec:base}
 % ══════════════════════════════════════════════════════════════════════════════
 
-This section summarises results from our conference
-paper~\cite{khawarey2026empirical}, reproduced here for reference.  All figures
-and tables in this section are adapted from~\cite{khawarey2026empirical}.
+Our prior conference work~\cite{khawarey2026empirical} established the baseline
+of this study: a multilayer perceptron~(MLP) trained on the Phishing URL and
+UNSW-NB15 datasets and subjected to white-box FGSM and PGD attacks.  The MLP
+attains a clean accuracy of $0.857$ on Phishing and $0.774$ on UNSW-NB15.  Under
+attack its robustness degrades substantially, with FGSM proving more damaging
+than PGD at matched maximum perturbation:
+$\mathrm{RI}_{\mathrm{FGSM}}=0.610$ versus $\mathrm{RI}_{\mathrm{PGD}}=0.725$
+on Phishing, and $\mathrm{RI}_{\mathrm{FGSM}}=0.692$ versus
+$\mathrm{RI}_{\mathrm{PGD}}=0.733$ on UNSW-NB15.  The single-step FGSM, by
+saturating every feature to the perturbation boundary, induces larger accuracy
+loss than iterative PGD at the same budget---an effect we examine in the ablation
+of \cref{sec:pgd}.
 
-The MLP achieves clean accuracy of 0.857 on Phishing and 0.774 on UNSW-NB15.
-Under FGSM, accuracy degrades monotonically with $\varepsilon$; RI values are
-0.610 (Phishing) and 0.692 (UNSW-NB15).  Under PGD~($\alpha=0.01$, 10 steps),
-accuracy degrades less steeply, yielding higher RI values of 0.725 (Phishing)
-and 0.733 (UNSW-NB15).  This counterintuitive PGD\,$<$\,FGSM result is explained
-in \cref{sec:pgd}.  Adversarial training with FGSM perturbations at
-$\varepsilon=0.05$ improves RI by approximately 0.08--0.12 on both datasets at
-the cost of a 2--4\% drop in clean accuracy.
+Because the MLP is differentiable, we can directly couple its gradient sensitivity
+to its explanation drift.  \Cref{fig:vuln-2panel} contrasts, on a per-feature
+basis, the input-gradient magnitude~(left) with the measured SHAP drift under
+perturbation~(right) for the Phishing classifier.  The two panels are strongly
+aligned: features that the model relies on most heavily in its gradient also
+exhibit the largest attribution instability, indicating that the directions an
+attacker would exploit are precisely the directions along which explanations are
+least trustworthy.
 
-SHAP attribution drift increases monotonically with $\varepsilon$ across all
-features.  URL-structure features (e.g.\ \texttt{PctExtNullSelfRedirectHyperlinks},
-\texttt{UrlLengthRT}) show the highest drift on Phishing;
-\texttt{dttl} and \texttt{ct\_dst\_sport\_ltm} are the most drift-prone on UNSW-NB15.
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth,
+  alt={Two-panel horizontal bar chart. Left panel: per-feature input-gradient magnitude for the MLP on the Phishing dataset, ranking features by adversarial sensitivity. Right panel: per-feature SHAP drift under adversarial perturbation for the same model. Features with high gradient magnitude also show high SHAP drift, demonstrating coupling between adversarial vulnerability and explanation instability.}
+]{../figures/feature_vulnerability_2panel_hbar.png}
+\caption{Per-feature gradient sensitivity~(left) and SHAP drift~(right) for the
+MLP on the Phishing dataset.  Features with high gradient magnitude tend to suffer
+the largest attribution drift, showing that adversarial vulnerability and
+explanation instability are coupled.}
+\label{fig:vuln-2panel}
+\end{figure}
+
+\Cref{fig:shap-heatmap-phish} resolves this drift across the full perturbation
+range.  Rows correspond to increasing attack magnitude $\varepsilon$, columns to
+individual features, and colour intensity to the normalised change in SHAP value
+relative to the clean input.  Drift grows monotonically with $\varepsilon$ and
+concentrates in a small subset of features: URL-structure features such as
+\texttt{PctExtNullSelfRedirectHyperlinks} and \texttt{UrlLengthRT} show the
+highest drift on Phishing; \texttt{dttl} and \texttt{ct\_dst\_sport\_ltm} are
+the most drift-prone on UNSW-NB15.  Even modest perturbations can reorder the
+model's apparent reasoning while leaving its prediction nominally correct.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.85\textwidth,
+  alt={Heatmap of SHAP attribution drift for the MLP on the Phishing dataset. Rows correspond to increasing adversarial perturbation magnitude epsilon from top to bottom; columns correspond to individual URL features. Colour intensity encodes SHAP drift magnitude. Drift grows monotonically with epsilon and concentrates in a small subset of high-influence features.}
+]{../figures/shap_drift_heatmap_phish.png}
+\caption{SHAP drift heatmap for the MLP on Phishing.  Rows index perturbation
+magnitude $\varepsilon$, columns index features, and colour encodes SHAP drift.
+Attribution instability rises with $\varepsilon$ and concentrates in a small
+subset of influential features.}
+\label{fig:shap-heatmap-phish}
+\end{figure}
+
+Adversarial training recovers part of the lost robustness.  Augmenting the
+training set with FGSM examples ($\varepsilon=0.05$, $20\%$ adversarial ratio)
+raises RI by roughly $0.08$--$0.12$ at a cost of $2$--$4\%$ clean accuracy on
+both datasets.  \Cref{fig:advtrain-curve} plots the baseline and adversarially
+trained accuracy-vs-$\varepsilon$ curves; the hardened model degrades more
+gracefully as $\varepsilon$ increases.  The same qualitative pattern holds on
+UNSW-NB15, where the larger and more heterogeneous feature space yields somewhat
+smaller robustness gains.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\textwidth,
+  alt={Two line plots showing classifier accuracy versus adversarial perturbation magnitude epsilon. Left plot: Phishing URL dataset; right plot: UNSW-NB15 dataset. Each plot shows two curves: baseline MLP (lower) and FGSM-adversarially-trained MLP (upper). The adversarially trained model degrades more slowly, improving the Robustness Index by approximately 0.08 to 0.12 at a cost of 2 to 4 percent clean accuracy.}
+]{../figures/robustness_curve_ablation_fgsm_pgd.png}
+\caption{Accuracy versus perturbation magnitude for baseline and
+FGSM-adversarially-trained MLPs on both datasets.  Adversarial training shifts
+the curves upward, improving RI by $0.08$--$0.12$ at a modest clean-accuracy cost.}
+\label{fig:advtrain-curve}
+\end{figure}
 
 % ══════════════════════════════════════════════════════════════════════════════
 \section{Tree Ensemble Extension: Black-Box Attacks and ESI}
@@ -385,7 +473,9 @@ decoupling across all conditions.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.85\textwidth]{../figures/xgb_attack_degeneracy.png}
+  \includegraphics[width=0.85\textwidth,
+    alt={Line plot showing classifier accuracy versus perturbation magnitude epsilon for XGBoost on the Phishing dataset under ZOO and Square Attack. The ZOO curve remains near 1.0 across all epsilon values, demonstrating ZOO degeneracy caused by near-zero finite-difference gradient estimates inside piecewise-constant tree leaves. The Square Attack curve drops sharply, revealing a Robustness Index of 0.36 and the true adversarial vulnerability.}
+  ]{../figures/xgb_attack_degeneracy.png}
   \caption{ZOO degeneracy on XGBoost: accuracy barely declines despite increasing
   $\varepsilon$, because finite-difference gradient estimates are near-zero inside
   piecewise-constant tree leaves.  Square Attack, which requires only loss values,
@@ -395,7 +485,9 @@ decoupling across all conditions.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=\textwidth]{../figures/attack_comparison_curves.png}
+  \includegraphics[width=\textwidth,
+    alt={Grid of line plots comparing accuracy versus perturbation magnitude epsilon for ZOO, Square Attack, and HopSkipJump on Random Forest and XGBoost across the Phishing URL and UNSW-NB15 datasets. Square Attack consistently produces the sharpest accuracy drops. ZOO is nearly ineffective against XGBoost. HopSkipJump performance is intermediate. Random Forest is more uniformly vulnerable across attack methods than XGBoost.}
+  ]{../figures/attack_comparison_curves.png}
   \caption{Accuracy vs.\ $\varepsilon$ for ZOO, Square Attack, and HopSkipJump
   on RF and XGBoost across Phishing and UNSW-NB15 datasets.}
   \label{fig:attack_comparison}
@@ -403,12 +495,68 @@ decoupling across all conditions.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.85\textwidth]{../figures/master_heatmap.png}
+  \includegraphics[width=0.85\textwidth,
+    alt={Heatmap with models (MLP, Random Forest, XGBoost) on one axis and datasets (Phishing, UNSW-NB15, NF-ToN-IoT) combined with attack methods on the other. Cells show Robustness Index and Explainability Stability Index values. XGBoost shows near-perfect RI under ZOO (0.97 to 0.99) but consistently the lowest ESI (0.06 to 0.16), while Random Forest shows lower RI but higher ESI, illustrating the decoupling between prediction robustness and explanation stability.}
+  ]{../figures/master_heatmap.png}
   \caption{RI and ESI heatmap across all three datasets and tree model families.
   XGBoost consistently shows higher RI (under ZOO) but lower ESI than RF,
   illustrating the prediction-robustness vs.\ explanation-stability decoupling.}
   \label{fig:master_heatmap}
 \end{figure}
+
+\subsection{Feature-Level TreeSHAP Drift}
+
+The aggregate ESI scores summarise explanation stability in a single number, but
+they obscure which features drive the instability.  To unpack this we compute
+per-feature TreeSHAP~\cite{lundberg2020treeshap} drift on the Phishing dataset,
+our most extensively studied case, for both tree models.
+\Cref{fig:treeshap-rf-phish,fig:treeshap-xgb-phish} present these as heatmaps
+over increasing perturbation magnitude, mirroring the MLP analysis of
+\cref{sec:base}.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.85\textwidth,
+  alt={Heatmap of per-feature TreeSHAP attribution drift for the Random Forest classifier on the Phishing dataset. Rows index perturbation magnitude epsilon; columns index individual URL features. Colour encodes drift magnitude. Instability concentrates in lexical and host-based URL features with high variance, and grows monotonically with epsilon.}
+]{../figures/treeshap_drift_rf_phish.png}
+\caption{Per-feature TreeSHAP drift for the Random Forest on Phishing.  Rows
+index perturbation magnitude $\varepsilon$, columns index features, and colour
+encodes attribution drift.  Drift accumulates on URL-structure features with
+high variance.}
+\label{fig:treeshap-rf-phish}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.85\textwidth,
+  alt={Heatmap of per-feature TreeSHAP attribution drift for XGBoost on the Phishing dataset, using the same axis conventions as the Random Forest heatmap. Colour intensity is markedly higher across most features compared to the Random Forest, reflecting XGBoost's lower Explainability Stability Index despite comparable prediction robustness.}
+]{../figures/treeshap_drift_xgb_phish.png}
+\caption{Per-feature TreeSHAP drift for XGBoost on Phishing.  Despite comparable
+prediction robustness, XGBoost exhibits markedly larger per-feature drift than
+the Random Forest, consistent with its lower ESI.}
+\label{fig:treeshap-xgb-phish}
+\end{figure}
+
+The drift is far from uniform across feature types.  For the Phishing classifiers,
+instability concentrates in lexical and host-based URL features, which take a wide
+range of values and therefore admit larger perturbations within the $\ell_\infty$
+budget.  The network datasets behave differently: in NF-ToN-IoT the flow
+features---\texttt{L4\_SRC\_PORT}, \texttt{L4\_DST\_PORT}, \texttt{PROTOCOL},
+\texttt{L7\_PROTO}, \texttt{IN\_BYTES}, \texttt{OUT\_BYTES}, \texttt{IN\_PKTS},
+\texttt{OUT\_PKTS}, \texttt{TCP\_FLAGS}, and
+\texttt{FLOW\_DURATION\_MILLISECONDS}---include both volumetric counters and
+categorical protocol identifiers, and drift accumulates on the high-variance byte
+and packet counters rather than on the discrete protocol fields.
+
+The most striking observation is the contrast between the two ensembles.  XGBoost
+displays consistently higher per-feature TreeSHAP drift than the Random Forest,
+even though its prediction-level robustness is comparable or superior on the same
+dataset.  The additive boosting structure, in which many shallow trees each
+contribute small corrections, makes individual feature attributions more sensitive
+to input perturbation than the averaging behaviour of a Random Forest.  This
+explanation-level fragility is precisely what the lower XGBoost ESI captures
+(e.g.\ $0.111$ vs.\ $0.287$ on Phishing), and it reinforces that robustness and
+explanation stability are distinct axes that must be measured separately.
 
 % ══════════════════════════════════════════════════════════════════════════════
 \section{NF-ToN-IoT: Third Dataset Evaluation}
@@ -437,7 +585,9 @@ and UNSW-NB15 (0.167); XGBoost ESI (0.159) follows the same cross-dataset patter
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=0.85\textwidth]{../figures/toniot_robustness_curves.png}
+  \includegraphics[width=0.85\textwidth,
+    alt={Line plots showing adversarial robustness curves for Random Forest and XGBoost on the NF-ToN-IoT dataset under ZOO, Square Attack, and HopSkipJump attacks. Random Forest ZOO accuracy degrades more steeply than on other datasets (Robustness Index 0.679) due to the lower 10-feature dimensionality improving ZOO gradient estimates. XGBoost ZOO remains near-perfect. Square Attack reduces both models to near-random accuracy.}
+  ]{../figures/toniot_robustness_curves.png}
   \caption{Adversarial robustness curves for RF and XGBoost on NF-ToN-IoT.
   ZOO is partially effective against RF (lower RI than other datasets) due to
   the lower feature dimensionality improving gradient estimate quality.}
@@ -498,7 +648,9 @@ studies on normalised tabular data.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=\textwidth]{../figures/pgd_alpha_ablation_curves.png}
+  \includegraphics[width=\textwidth,
+    alt={Two line plots showing MLP accuracy versus perturbation magnitude epsilon for FGSM and PGD at five step sizes (alpha equals 0.005, 0.01, 0.02, 0.05, 0.10) with 10 steps fixed. Left: Phishing URL dataset; right: UNSW-NB15 dataset. PGD with small alpha (0.005, 0.01) is weaker than FGSM (higher accuracy under attack). As alpha increases to 0.05 and 0.10, PGD matches and surpasses FGSM effectiveness, confirming the step-size sensitivity artifact on z-score normalised tabular data.}
+  ]{../figures/pgd_alpha_ablation_curves.png}
   \caption{Accuracy vs.\ $\varepsilon$ for FGSM and PGD at five step sizes on
   Phishing (left) and UNSW-NB15 (right).  PGD with small $\alpha$ is a weaker
   attack than FGSM; the gap closes at $\alpha \geq 0.05$.}
@@ -535,17 +687,85 @@ these are more realistic threat models for operational cybersecurity evaluation.
 
 \subsection{ESI as a Complement to RI}
 
-Existing explanation stability metrics such as OpenXAI's RIS and
-ROS~\cite{agarwal2022openxai} measure explanation faithfulness relative to model
-internals.  ESI is orthogonal: it measures how explanations change specifically
-under adversarial perturbation, making it a security-focused metric.  Our
-cross-dataset results show that ESI is consistently ordered (XGB\,$<$\,RF across
-all three datasets), suggesting it captures a stable property of the model
-architecture rather than dataset-specific noise.  The decoupling between RI and
-ESI---high RI does not imply high ESI---has direct operational implications: a
-security team relying on SHAP explanations to triage alerts cannot assume that a
-model with strong prediction robustness also provides stable explanations under
-adversarial conditions.
+The Robustness Index and the Explainability Stability Index measure orthogonal
+properties, and our results show that the two need not move together.  A model
+may retain its prediction under perturbation while its attributions reorder
+completely; conversely, stable attributions do not guarantee a stable prediction.
+ESI therefore supplies information that RI alone cannot, capturing the
+trustworthiness of a model's explanations under attack rather than the
+correctness of its label.
+
+This positioning distinguishes ESI from existing explanation-stability metrics.
+Evaluation frameworks such as OpenXAI~\cite{agarwal2022openxai} formalise
+relative input and output stability (RIS/ROS), which quantify the faithfulness
+and local Lipschitz behaviour of explanations---how much an explanation changes
+under random or local input noise.  Alvarez-Melis and
+Jaakkola~\cite{alvarezmelis2018robust} similarly probe explanation sensitivity
+to local perturbations.  ESI instead measures attribution drift under
+\emph{adversarial} perturbations of growing magnitude, tying explanation
+stability to the same threat model that defines RI.  Where existing metrics ask
+whether explanations are locally smooth, ESI asks whether they survive an
+adversary.
+
+The cross-dataset behaviour of ESI supports its use as a model-selection
+criterion.  Across all three datasets, XGBoost records a lower ESI than the
+Random Forest ($0.111$ vs.\ $0.287$ on Phishing, $0.063$ vs.\ $0.167$ on
+UNSW-NB15, $0.159$ vs.\ $0.214$ on NF-ToN-IoT).  This consistent ordering,
+despite very different feature spaces and class balances, indicates that ESI
+captures an architectural property of the boosted ensemble rather than
+dataset-specific noise---a prerequisite for any metric intended to guide model
+choice.
+
+The practical implication for security operations is direct.  A model with high
+RI but low ESI is operationally hazardous: it continues to raise correct,
+confident alerts under adversarial conditions, yet the explanations it presents
+to a SOC analyst become unstable and misleading.  An analyst triaging such alerts
+may be steered toward the wrong features and the wrong remediation, eroding trust
+in the very explanations meant to support the decision.  Reporting RI and ESI
+jointly lets practitioners avoid deploying models that are robust in label but
+fragile in rationale.  Future work will extend ESI beyond SHAP to
+LIME~\cite{ribeiro2016lime} attributions, enabling explanation-stability
+comparisons across interpretation methods as well as across models.
+
+% ══════════════════════════════════════════════════════════════════════════════
+\section{Limitations}
+\label{sec:limitations}
+% ══════════════════════════════════════════════════════════════════════════════
+
+Several limitations bound the scope of our conclusions and motivate future work.
+
+\paragraph{Feature validity.}
+Our attacks apply $\ell_\infty$ perturbations independently to each feature,
+which can violate the dependencies inherent in structured security data.  In
+NetFlow records, for example, byte and packet counters are strongly correlated
+and the ratio of \texttt{IN\_BYTES} to \texttt{IN\_PKTS} is bounded by physical
+packet sizes, so an unconstrained perturbation may produce records that no real
+flow could generate.  The reported robustness values are therefore conservative
+upper bounds on realistic adversarial difficulty; future work should incorporate
+domain-constraint projections that restrict perturbations to the manifold of
+valid traffic.
+
+\paragraph{Dataset scope.}
+We evaluate three datasets drawn from two domains---web security (Phishing URLs)
+and network intrusion detection (UNSW-NB15, NF-ToN-IoT).  Other important
+security tasks, notably static and dynamic malware classification and host-based
+intrusion detection, are not covered, and their feature semantics may interact
+differently with both attacks and explanation drift.
+
+\paragraph{Computational constraints.}
+All experiments run on CPU, which limits attack strength.  We cap HopSkipJump
+at $120$ samples, against $300$ for the other attacks, and restrict the number of
+ZOO iterations to keep evaluation tractable.  A GPU-based evaluation would permit
+larger query budgets and more iterations, likely yielding lower RI values and thus
+exposing stronger vulnerabilities than those reported here.
+
+\paragraph{ESI approximation.}
+For tree models we compute ESI using ZOO-perturbed inputs, which is convenient
+because ZOO produces smoothly increasing perturbations at each $\varepsilon$
+step, but it is not necessarily the attack that maximises attribution drift.
+The absolute ESI values would shift under a different generating attack; using
+Square Attack to drive ESI computation is a natural refinement that would better
+stress-test explanation stability independently of prediction accuracy.
 
 % ══════════════════════════════════════════════════════════════════════════════
 \section{Conclusion}
@@ -573,6 +793,19 @@ Directions for future work include incorporating feature validity constraints in
 the attack protocol, extending ESI to other XAI methods beyond SHAP (e.g.\ LIME),
 and evaluating adversarial training as a defence for tree ensembles---for which
 gradient-based training augmentation is not directly applicable.
+
+% ── Credits ───────────────────────────────────────────────────────────────────
+\begin{credits}
+\subsubsection{\ackname}
+The authors thank the anonymous reviewers of the ICAART 2026 conference version
+for feedback that directly motivated the tree ensemble extension, the black-box
+attack comparison, and the PGD step-size ablation presented in this work.
+Experiment code and result tables are publicly available~\cite{khawarey2026code}.
+
+\subsubsection{\discintname}
+The authors have no competing interests to declare that are relevant to the
+content of this article.
+\end{credits}
 
 % ── References ────────────────────────────────────────────────────────────────
 \bibliographystyle{splncs04}

@@ -76,14 +76,35 @@ feedback on the conference version.
 \textbf{(vii) Master comparative analysis.}
 A comprehensive results table spanning all three datasets, three model families,
 and five attack methods is introduced, enabling cross-domain and cross-model
-comparison in a single view.  Four new figures accompany the extended experiments.
+comparison in a single view.  Ten new figures accompany the extended experiments,
+including per-feature TreeSHAP drift heatmaps for both tree models on the Phishing
+dataset, a gradient-sensitivity--SHAP coupling panel for the MLP, epsilon-resolved
+SHAP drift heatmaps, adversarial-training robustness curves, and the full attack
+comparison and PGD step-size ablation curves.
+
+\textbf{(viii) Feature-level TreeSHAP drift analysis.}
+A new subsection decomposes the aggregate ESI score into per-feature attribution
+drift, revealing which feature types drive explanation instability for each model
+family.  The analysis confirms that XGBoost's boosted-additive structure produces
+higher per-feature drift than Random Forest's ensemble averaging, consistent with
+the consistently lower XGBoost ESI observed across all three datasets.
+
+\textbf{(ix) Limitations section.}
+A dedicated Limitations section discusses four scope constraints absent from the
+conference version: feature-validity constraints on $\ell_\infty$ perturbations
+in structured security data, dataset scope (two domains), CPU-only computational
+budget affecting attack strength, and the approximation of ESI via ZOO-perturbed
+inputs rather than drift-maximising attacks.
 
 All tables, figures, and textual descriptions in this extended version are either
 entirely new or substantially revised.  Results from the conference paper are
 summarised in prose with explicit citation~\cite{khawarey2026empirical} rather
 than reproduced verbatim.  The title, abstract, and conclusions have been rewritten
-to reflect the extended scope of the work.  Experiment code and result tables are
-publicly available at~\cite{khawarey2026code}.
+to reflect the extended scope of the work.  The Related Work section has been
+expanded to position ESI explicitly against existing explanation-stability metrics
+(OpenXAI RIS/ROS, Alvarez-Melis and Jaakkola sensitivity measures) and to address
+the gap in tree-ensemble robustness literature.  Experiment code and result tables
+are publicly available at~\cite{khawarey2026code}.
 
 \bibliographystyle{splncs04}
 \bibliography{refs}
