@@ -36,31 +36,27 @@ Stability in Cybersecurity Classifiers}
 
 % ── Abstract ──────────────────────────────────────────────────────────────────
 \begin{abstract}
-Adversarial attacks on machine learning classifiers used in cybersecurity
-represent a growing practical threat, yet most empirical studies focus on
-gradient-based attacks against neural networks evaluated on image benchmarks.
-In this work we extend our prior study~\cite{khawarey2026empirical} to provide
-a comprehensive empirical analysis of adversarial robustness and explainability
-stability for three classifier families---Multi-Layer Perceptron~(MLP), Random
-Forest~(RF), and XGBoost---across three tabular cybersecurity datasets: phishing
-URL detection, UNSW-NB15 network intrusion, and NF-ToN-IoT IoT traffic.
-Beyond gradient-based attacks~(FGSM, PGD), we evaluate three black-box attack
-methods~(ZOO, Square Attack, HopSkipJump) applicable to non-differentiable tree
-models.  We introduce the \emph{Explainability Stability Index}~(ESI), a scalar
-metric computed from TreeSHAP attribution drift that measures how stable a
-model's explanations remain under adversarial perturbation.  A key finding
-is that gradient-based black-box attacks (ZOO) produce degenerate results against
-XGBoost: apparent near-perfect robustness~(RI\,$\approx$\,0.98) is an artefact of
-piecewise-constant prediction surfaces, while score-based Square Attack reveals
-genuine vulnerability~(RI\,$\approx$\,0.36).  Crucially, even the degenerate ZOO
-perturbations, though insufficient to cause mis\-classification, still cause
-substantial attribution drift: XGBoost ESI falls to $0.06$--$0.11$, nearly
-three times lower than for Random Forest ($0.17$--$0.29$).
-This shows that prediction robustness and explanation stability are
-\emph{distinct axes} requiring joint measurement, and that attack-method
-selection critically shapes which axis is exposed.  A step-size ablation for PGD explains a counter\-intuitive
-anomaly on z-score normalised tabular data.  Experiment code and result tables
-are publicly available~\cite{khawarey2026code}.
+Adversarial attacks on cybersecurity classifiers pose a dual threat: degrading
+predictions and destabilising the SHAP-based explanations that security analysts
+rely on to understand and triage alerts.  We extend our prior MLP
+study~\cite{khawarey2026empirical} to Random Forest and XGBoost across three
+tabular security datasets (phishing URLs, UNSW-NB15, NF-ToN-IoT), evaluating
+five attacks including three black-box methods applicable to non-differentiable
+tree models.  We introduce the \emph{Explainability Stability Index}~(ESI), a
+scalar metric computed from TreeSHAP attribution drift under adversarial
+perturbation, directly comparable to the Robustness Index~(RI).
+A key finding is that gradient-based black-box attacks~(ZOO) produce degenerate
+results against XGBoost (apparent RI\,$\approx$\,0.98) due to piecewise-constant
+prediction surfaces, while score-based Square Attack reveals genuine
+vulnerability~(RI\,$\approx$\,0.36).  Critically, even ZOO's degenerate
+perturbations---insufficient to cause mis\-classification---drive substantial
+attribution drift~(XGBoost ESI\,$\approx$\,0.06--0.11 vs.\ 0.17--0.29 for
+Random Forest), demonstrating that prediction robustness and explanation
+stability are \emph{distinct axes} requiring joint measurement.  A two-axis
+framework~(gradient dependence, query efficiency) explains the observed attack
+ranking and yields practical guidance for tree ensemble evaluation.  A step-size
+ablation explains a counter\-intuitive PGD anomaly on z-score normalised tabular
+data.  Code and results are publicly available~\cite{khawarey2026code}.
 
 \keywords{Adversarial robustness \and Explainability drift \and SHAP \and
 TreeSHAP \and Cybersecurity \and Intrusion detection \and XGBoost \and
@@ -113,6 +109,13 @@ Specifically, we make the following new contributions beyond~\cite{khawarey2026e
   \item \textbf{PGD step-size ablation.}  A controlled ablation confirms the
     PGD\,$<$\,FGSM anomaly is a hyperparameter sensitivity artifact on
     z-score normalised tabular data.
+  \item \textbf{Feature-level attribution drift.}  Per-feature TreeSHAP drift
+    heatmaps show which feature types drive explanation instability and why
+    XGBoost's additive boosting structure produces higher drift than Random Forest
+    averaging.
+  \item \textbf{Attack-method selection guidance.}  A two-axis framework
+    (gradient dependence, query efficiency) explains the observed attack ranking
+    and yields practical recommendations for tree ensemble evaluation.
 \end{itemize}
 
 The remainder of this paper is structured as follows.
@@ -124,7 +127,8 @@ The remainder of this paper is structured as follows.
 \Cref{sec:trees} presents the tree model extension.
 \Cref{sec:toniot} covers the NF-ToN-IoT dataset.
 \Cref{sec:pgd} presents the PGD ablation.
-\Cref{sec:discussion} discusses attack realism and ESI implications.
+\Cref{sec:discussion} discusses attack realism, ESI implications, and
+attack-method selection guidance~(\cref{sec:attack_guidance}).
 \Cref{sec:limitations} discusses limitations and directions for future work.
 \Cref{sec:conclusion} concludes.
 
@@ -185,7 +189,10 @@ OpenXAI~\cite{agarwal2022openxai} formalise relative input and output stability
 behaviour of explanations rather than their behaviour under an adversary.
 Alvarez-Melis and Jaakkola~\cite{alvarezmelis2018robust} introduced sensitivity
 and infidelity measures that probe explanation stability against random or local
-input changes.  The distinction we draw is deliberate: the Explainability
+input changes.  Warnecke et al.~\cite{warnecke2020evaluating} evaluated SHAP,
+LIME, and gradient methods specifically for security classifiers, finding that
+explanation quality degrades significantly under distribution shift.  The
+distinction we draw is deliberate: the Explainability
 Stability Index (ESI) measures attribution drift specifically under adversarial
 perturbations of increasing magnitude, coupling the explanation-stability question
 to the same threat model used for the Robustness Index, rather than to generic
@@ -642,7 +649,7 @@ direction for further dataset validation.
 A notable departure from Phishing and UNSW-NB15 is that ZOO RI for RF drops to
 0.679 on NF-ToN-IoT, significantly lower than on the other datasets (0.915,
 0.949).  One plausible explanation is the lower feature dimensionality of NF-ToN-IoT
-(10 features vs.\ 48 for Phishing and 40 for UNSW-NB15): with fewer features,
+(10 features vs.\ 48 for Phishing and 43 for UNSW-NB15): with fewer features,
 ZOO's finite-difference gradient estimates sample a smaller coordinate space and
 may be more accurate, reducing the degeneracy.  However, the three datasets also
 differ in domain, feature-type distribution, and class separability, so
@@ -777,9 +784,10 @@ control (the attacker constructs the phishing page), which provides a reasonable
 basis for unconstrained perturbations.  In network intrusion detection, however,
 some NetFlow features are deterministic functions of others (packet counts
 constrain byte-per-packet ratios), so any perturbation that violates these
-constraints produces records no real flow could generate.  Making the attack
-protocol domain-realistic requires projecting perturbations onto the manifold of
-valid network records---a direction left for future work~\cite{apruzzese2022modeling}.
+constraints produces records no real flow could generate.  Making the attack protocol domain-realistic requires projecting perturbations
+onto the manifold of valid network records---a direction formalised as the
+\emph{problem-space} constraint by Pierazzi et al.~\cite{pierazzi2020intriguing}
+and left for future work in our setting~\cite{apruzzese2022modeling}.
 
 \subsection{ESI as a Complement to RI}
 
@@ -841,7 +849,7 @@ yields near-zero finite differences inside tree leaves, ZOO is essentially
 degenerate at all dimensionalities (RI\,=\,0.97--0.99 across all three datasets).
 Against Random Forest, whose ensemble averaging produces smoother decision
 boundaries, ZOO is partially effective but strongly dimensionality-dependent:
-RI drops from 0.949 (UNSW-NB15, 40 features) to 0.679 (NF-ToN-IoT, 10 features).
+RI drops from 0.949 (UNSW-NB15, 43 features) to 0.679 (NF-ToN-IoT, 10 features).
 Square Attack and HopSkipJump require no gradient information and are unaffected
 by this axis entirely.
 
