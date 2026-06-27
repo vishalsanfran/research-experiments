@@ -1,6 +1,6 @@
 # Adversarial Robustness and Explainability Drift in Cybersecurity Classifiers
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.XXXXXXX.svg)](https://doi.org/10.5281/zenodo.XXXXXXX)
+[![DOI](https://zenodo.org/badge/1282303393.svg)](https://doi.org/10.5281/zenodo.20968236)
 
 Experimental code for the paper series:
 

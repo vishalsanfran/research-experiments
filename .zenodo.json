@@ -37,6 +37,11 @@
       "identifier": "10.5220/0014360100004052",
       "relation": "isSupplementTo",
       "scheme": "doi"
+    },
+    {
+      "identifier": "10.5281/zenodo.20968236",
+      "relation": "isIdenticalTo",
+      "scheme": "doi"
     }
   ],
   "communities": [
