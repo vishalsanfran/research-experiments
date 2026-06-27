@@ -1,0 +1,90 @@
+\documentclass[12pt]{article}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{parskip}
+\usepackage{hyperref}
+
+\title{Statement of Differences Between the Conference Version\\
+and the Extended Version}
+\author{Mona Rajhans \and Vishal Khawarey}
+\date{}
+
+\begin{document}
+\maketitle
+
+\noindent
+The conference version of this paper~\cite{khawarey2026empirical} presented an
+empirical study of adversarial robustness and SHAP-based explainability drift for
+a Multi-Layer Perceptron~(MLP) classifier evaluated on two cybersecurity datasets:
+a phishing URL detection dataset and the UNSW-NB15 network intrusion dataset.
+Adversarial robustness was measured under the Fast Gradient Sign Method~(FGSM) and
+Projected Gradient Descent~(PGD), and the Robustness Index~(RI) was introduced as
+a scalar summary of the accuracy--perturbation curve.  The paper further
+characterised the coupling between gradient-based feature sensitivity and SHAP
+attribution drift, and demonstrated that adversarial training partially recovers
+robustness on both datasets.
+
+This extended version makes the following substantive contributions that together
+constitute well over 30\% new material relative to the conference paper.
+
+\textbf{(i) New classifier families.}
+Random Forest and XGBoost are added alongside the MLP, representing the
+tree-ensemble family that dominates production cybersecurity deployments but was
+absent from the conference study.  Both models are evaluated under identical
+experimental conditions across all datasets and attack methods.
+
+\textbf{(ii) New attack methods.}
+Three black-box attacks are introduced and evaluated: ZOO~\cite{chen2017zoo}
+(finite-difference gradient approximation), Square
+Attack~\cite{andriushchenko2020square} (score-based random search), and
+HopSkipJump~\cite{chen2020hopskipjump} (decision-boundary estimation).  This
+extends the attack surface from gradient-based white-box attacks, which are
+inapplicable to non-differentiable tree models, to a fully model-agnostic
+black-box evaluation framework.
+
+\textbf{(iii) New metric: Explainability Stability Index~(ESI).}
+ESI is defined as the complement of the normalised area under the SHAP-drift curve,
+providing an explanation-domain analogue of RI that operates on the same
+$[0,1]$ scale.  ESI is computed via TreeSHAP~\cite{lundberg2020treeshap} for
+Random Forest and XGBoost, enabling direct cross-model comparison of prediction
+robustness and explanation stability within a single unified framework.
+
+\textbf{(iv) New dataset.}
+The NF-ToN-IoT dataset~\cite{sarhan2021nftoniot} (1.16\,M NetFlow~v2 records,
+10 features) is added as a third evaluation domain, covering IoT network intrusion
+detection and providing cross-domain validation of all findings.
+
+\textbf{(v) New empirical findings.}
+Evaluation reveals that ZOO produces near-degenerate gradient estimates against
+XGBoost (RI\,$\approx$\,0.97) due to its piecewise-constant prediction surface,
+whereas Square Attack reduces XGBoost accuracy to near-random (RI\,=\,0.36 on
+Phishing).  This 0.64 gap exposes a methodological risk: attack-method selection
+is not model-agnostic.  Additionally, we demonstrate that XGBoost achieves high
+prediction robustness under ZOO (RI\,$\approx$\,0.98) yet exhibits low explanation
+stability (ESI\,$\approx$\,0.06--0.11), showing that prediction robustness and
+explanation stability are \emph{decoupled}---a high RI does not guarantee
+trustworthy explanations under attack.
+
+\textbf{(vi) PGD step-size ablation.}
+A controlled ablation over PGD step sizes $\alpha \in \{0.005, 0.01, 0.02, 0.05,
+0.10\}$ confirms that the PGD\,$<$\,FGSM anomaly observed in the conference paper
+is a hyperparameter sensitivity artifact on z-score normalised tabular data, not a
+structural property of the model.  PGD with $\alpha=0.01$ (the conventional choice)
+yields RI\,=\,0.82 versus FGSM's RI\,=\,0.68 on Phishing; the gap closes only at
+$\alpha \geq 0.05$.  This provides a rigorous empirical response to reviewer
+feedback on the conference version.
+
+\textbf{(vii) Master comparative analysis.}
+A comprehensive results table spanning all three datasets, three model families,
+and five attack methods is introduced, enabling cross-domain and cross-model
+comparison in a single view.  Four new figures accompany the extended experiments.
+
+All tables, figures, and textual descriptions in this extended version are either
+entirely new or substantially revised.  Results from the conference paper are
+summarised in prose with explicit citation~\cite{khawarey2026empirical} rather
+than reproduced verbatim.  The title, abstract, and conclusions have been rewritten
+to reflect the extended scope of the work.  Experiment code and result tables are
+publicly available at~\cite{khawarey2026code}.
+
+\bibliographystyle{splncs04}
+\bibliography{refs}
+\end{document}
