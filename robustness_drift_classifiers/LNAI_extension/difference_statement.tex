@@ -55,14 +55,17 @@ detection and providing cross-domain validation of all findings.
 
 \textbf{(v) New empirical findings.}
 Evaluation reveals that ZOO produces near-degenerate gradient estimates against
-XGBoost (RI\,$\approx$\,0.97) due to its piecewise-constant prediction surface,
+XGBoost (RI\,$\approx$\,0.98) due to its piecewise-constant prediction surface,
 whereas Square Attack reduces XGBoost accuracy to near-random (RI\,=\,0.36 on
-Phishing).  This 0.64 gap exposes a methodological risk: attack-method selection
+Phishing).  This 0.62 gap exposes a methodological risk: attack-method selection
 is not model-agnostic.  Additionally, we demonstrate that XGBoost achieves high
 prediction robustness under ZOO (RI\,$\approx$\,0.98) yet exhibits low explanation
-stability (ESI\,$\approx$\,0.06--0.11), showing that prediction robustness and
-explanation stability are \emph{decoupled}---a high RI does not guarantee
-trustworthy explanations under attack.
+stability (ESI\,$\approx$\,0.06--0.16 across datasets), showing that prediction
+robustness and explanation stability are \emph{decoupled}---a high RI does not
+guarantee trustworthy explanations under attack.  To confirm the RF\,>\,XGB ESI
+ordering is not itself a ZOO artefact, we recompute ESI under Square Attack on
+Phishing: the ordering holds (RF\,ESI\,=\,0.230, XGB\,ESI\,=\,0.117 vs.\
+0.287 and 0.111 under ZOO), confirming the gap is architectural.
 
 \textbf{(vi) PGD step-size ablation.}
 A controlled ablation over PGD step sizes $\alpha \in \{0.005, 0.01, 0.02, 0.05,
@@ -76,11 +79,11 @@ feedback on the conference version.
 \textbf{(vii) Master comparative analysis.}
 A comprehensive results table spanning all three datasets, three model families,
 and five attack methods is introduced, enabling cross-domain and cross-model
-comparison in a single view.  Ten new figures accompany the extended experiments,
-including per-feature TreeSHAP drift heatmaps for both tree models on the Phishing
-dataset, a gradient-sensitivity--SHAP coupling panel for the MLP, epsilon-resolved
-SHAP drift heatmaps, adversarial-training robustness curves, and the full attack
-comparison and PGD step-size ablation curves.
+comparison in a single view.  Eight new figures accompany the extended experiments:
+the ZOO-degeneracy accuracy curve, full attack comparison curves (ZOO, Square
+Attack, HopSkipJump), the master RI/ESI heatmap, per-feature TreeSHAP drift
+heatmaps for both tree models on Phishing, NF-ToN-IoT robustness curves, the PGD
+step-size ablation, and the ESI drift curves comparing ZOO versus Square Attack.
 
 \textbf{(viii) Feature-level TreeSHAP drift analysis.}
 A new subsection decomposes the aggregate ESI score into per-feature attribution
@@ -89,7 +92,15 @@ family.  The analysis confirms that XGBoost's boosted-additive structure produce
 higher per-feature drift than Random Forest's ensemble averaging, consistent with
 the consistently lower XGBoost ESI observed across all three datasets.
 
-\textbf{(ix) Limitations section.}
+\textbf{(ix) Attack-method selection guidance.}
+A new discussion section introduces a two-axis framework~(gradient dependence,
+query efficiency) that explains the observed attack ranking across all three
+datasets and yields concrete practical recommendations: Square Attack should be
+the primary benchmark for tree ensembles; ZOO alone overestimates robustness by
+up to 0.62 RI; adaptive PGD step sizes ($\alpha = \varepsilon/\text{steps}$) are
+recommended for z-score normalised tabular data.
+
+\textbf{(x) Limitations section.}
 A dedicated Limitations section discusses four scope constraints absent from the
 conference version: feature-validity constraints on $\ell_\infty$ perturbations
 in structured security data, dataset scope (two domains), CPU-only computational
