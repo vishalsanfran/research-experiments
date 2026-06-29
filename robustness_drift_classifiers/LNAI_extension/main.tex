@@ -720,7 +720,10 @@ HSJ's binary-search-and-gradient-estimate loop explores a substantially smaller
 volume, approaching the effectiveness of Square Attack's random search.
 
 ESI for RF (0.214) is between Phishing (0.287) and UNSW-NB15 (0.167);
-XGBoost ESI (0.159) follows the same cross-dataset pattern.
+XGBoost ESI (0.159) follows the same cross-dataset pattern.  However, the
+five-seed variance study (\Cref{tab:variance}) shows the RF$-$XGB ESI margin
+on NF-ToN-IoT is $0.025 \pm 0.082$, which is within sampling noise; this
+ordering should be treated as inconclusive on this dataset.
 
 \Cref{fig:toniot} shows the robustness curves for both models on NF-ToN-IoT.
 
@@ -1097,16 +1100,41 @@ query budgets to determine whether it is a fundamental consequence of the
 piecewise-constant prediction surface or a function of the iteration limit.
 
 \paragraph{Variance and statistical significance.}
-All reported RI and ESI values are single-run point estimates computed under fixed
-random seeds on subsets of 256--300 test examples.  We do not report bootstrap
-confidence intervals or variance across random initialisations.  For comparisons
-with large effect sizes---such as XGBoost ZOO\,RI\,$\approx$\,0.98 versus Square
-Attack\,RI\,$\approx$\,0.36---the ordering is unlikely to reverse under repeated
-evaluation.  For closer comparisons, such as RF versus XGBoost ESI on
-NF-ToN-IoT ($0.214$ vs.\ $0.159$), confidence intervals could overlap and the
-ordering should be treated as preliminary.  Future work should estimate bootstrap
-CIs and report variance across multiple random seeds to allow proper significance
-testing.
+We ran each experiment across five random seeds that jointly control the
+train/test split, model initialisation, and evaluation subset selection.
+\Cref{tab:variance} reports mean\,$\pm$\,std for the two key comparisons.
+
+\begin{table}[t]
+\caption{Variance across 5 random seeds.  ``XGB gap'' is XGB ZOO\,RI $-$
+XGB Square\,RI; ``RF$-$XGB ESI'' is the ESI margin between model families.
+$k/5$ counts seeds where RF\,>\,XGB ESI holds.}
+\label{tab:variance}
+\centering
+\small
+\begin{tabular}{lccc}
+\toprule
+Dataset & XGB gap (ZOO$-$Sq RI) & RF$-$XGB ESI & RF$>$XGB ($k/5$) \\
+\midrule
+NF-ToN-IoT  & $0.541 \pm 0.023$ & $0.025 \pm 0.082$ & 3/5 \\
+Phishing    & $0.575 \pm 0.029$ & $0.125 \pm 0.087$ & 4/5 \\
+HIKARI-2021 & $0.537 \pm 0.017$ & $0.064 \pm 0.068$ & 4/5 \\
+UNSW-NB15   & $0.534 \pm 0.035$ & $0.067 \pm 0.015$ & 5/5 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The ZOO degeneracy gap is highly reproducible: std\,$\leq$\,0.035 across all
+four datasets, confirming this is a structural property rather than a lucky
+point estimate.  ESI is more variable: RF ESI std reaches 0.084--0.101 on
+low-dimensional datasets (NF-ToN-IoT, Phishing), reflecting sensitivity of the
+normalised-AUC formula to which 256 test examples are sampled.  The RF\,>\,XGB
+ESI ordering holds in all five seeds on UNSW-NB15 (margin $0.067 \pm 0.015$,
+the smallest relative std), in four of five seeds on Phishing and HIKARI-2021,
+and in three of five on NF-ToN-IoT.  The NF-ToN-IoT margin ($0.025 \pm 0.082$)
+is within noise and should be treated as inconclusive; the ordering on the other
+three datasets is directionally consistent but confidence intervals overlap on
+Phishing and HIKARI, so the architectural claim is best supported by the
+qualitative pattern across datasets rather than any single point estimate.
 
 \paragraph{Tree ensemble defences.}
 This study evaluates adversarial attacks on tree ensembles but does not evaluate
@@ -1142,10 +1170,11 @@ evaluation datasets (NF-ToN-IoT and HIKARI-2021), and metrics (ESI).
 
 Three findings stand out.  First, ZOO produces degenerate gradient estimates
 against XGBoost, inflating apparent robustness; Square Attack reveals genuine
-vulnerability with a RI gap of up to 0.62 on the same model.  This gap replicates
-across all four datasets (0.50--0.62), showing that attack-method selection is
-not model-agnostic and that gradient-based black-box attacks are insufficient
-for evaluating tree ensembles.  Second, RI and ESI can decouple: ZOO
+vulnerability with a RI gap of up to 0.62 on the same model.  This gap
+replicates across all four datasets (mean 0.534--0.575, std\,$\leq$\,0.035
+across five seeds), confirming that attack-method selection is not model-agnostic
+and that gradient-based black-box attacks are insufficient for evaluating tree
+ensembles.  Second, RI and ESI can decouple: ZOO
 perturbations that fail to fool XGBoost predictions (artefact RI\,$\approx$\,0.98)
 still drive large attribution drift (ESI\,$\approx$\,0.06--0.16), demonstrating
 that an attack too weak to cause misclassification can nonetheless destabilise

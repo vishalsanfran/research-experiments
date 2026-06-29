@@ -108,12 +108,21 @@ the primary benchmark for tree ensembles; ZOO alone overestimates robustness by
 up to 0.62 RI; adaptive PGD step sizes ($\alpha = \varepsilon/\text{steps}$) are
 recommended for z-score normalised tabular data.
 
-\textbf{(x) Limitations section.}
-A dedicated Limitations section discusses four scope constraints absent from the
+\textbf{(x) Variance and significance study.}
+A five-seed variance study (varying train/test split, model initialisation, and
+evaluation subsets) is added to the Limitations section.  The ZOO degeneracy gap
+is highly reproducible (mean 0.534--0.575, std\,$\leq$\,0.035 across all four
+datasets), confirming the primary finding is not a lucky point estimate.  ESI
+variance is higher (RF ESI std up to 0.101); the RF\,$>$\,XGB ordering holds in
+all five seeds on UNSW-NB15 and in 4/5 seeds on Phishing and HIKARI-2021, but is
+within noise on NF-ToN-IoT ($0.025 \pm 0.082$).
+
+\textbf{(xi) Limitations section.}
+A dedicated Limitations section discusses five scope constraints absent from the
 conference version: feature-validity constraints on $\ell_\infty$ perturbations
-in structured security data, dataset scope (two domains), CPU-only computational
-budget affecting attack strength, and the approximation of ESI via ZOO-perturbed
-inputs rather than drift-maximising attacks.
+in structured security data, dataset scope, CPU-only computational budget,
+the approximation of ESI via ZOO-perturbed inputs, and the variance study
+results quantifying which conclusions are statistically robust.
 
 All tables, figures, and textual descriptions in this extended version are either
 entirely new or substantially revised.  Results from the conference paper are
