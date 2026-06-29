@@ -48,10 +48,9 @@ perturbation, reported on the same $[0,1]$ scale as the Robustness Index~(RI).
 A key finding is that gradient-based black-box attacks~(ZOO) produce degenerate
 results against XGBoost (apparent RI\,$\approx$\,0.98) due to piecewise-constant
 prediction surfaces, while score-based Square Attack reveals genuine
-vulnerability~(RI\,$\approx$\,0.36).  Critically, even ZOO's degenerate
-perturbations---insufficient to cause mis\-classification---drive substantial
-attribution drift~(XGBoost ESI\,$\approx$\,0.06--0.16 vs.\ 0.14--0.29 for
-Random Forest), demonstrating that prediction robustness and explanation
+vulnerability~(RI\,$\approx$\,0.36).  These degenerate perturbations still drive substantial attribution drift:
+XGBoost ESI\,$\approx$\,0.06--0.16 despite near-perfect ZOO robustness,
+versus 0.14--0.29 for RF, showing that prediction robustness and explanation
 stability are \emph{distinct axes} requiring joint measurement.  A two-axis
 framework~(gradient dependence, query efficiency) explains the observed attack
 ranking and yields practical guidance for tree ensemble evaluation.  A step-size
@@ -434,9 +433,7 @@ least trustworthy.
   alt={Two-panel horizontal bar chart. Left panel: per-feature input-gradient magnitude for the MLP on the Phishing dataset, ranking features by adversarial sensitivity. Right panel: per-feature SHAP drift under adversarial perturbation for the same model. Features with high gradient magnitude also show high SHAP drift, demonstrating coupling between adversarial vulnerability and explanation instability.}
 ]{../figures/feature_vulnerability_2panel_hbar.png}
 \caption{Per-feature gradient sensitivity~(left) and SHAP drift~(right) for the
-MLP on the Phishing dataset.  Features with high gradient magnitude tend to suffer
-the largest attribution drift, showing that adversarial vulnerability and
-explanation instability are coupled.}
+MLP on the Phishing dataset.}
 \label{fig:vuln-2panel}
 \end{figure}
 
@@ -493,12 +490,9 @@ Table~\ref{tab:master} presents RI and ESI for all models, datasets, and attack
 methods.
 
 \begin{table}[htbp]
-\caption{RI and ESI across all models, datasets, and attacks.
-Higher is better.  ``---'': inapplicable.
-$^\dagger$FGSM/PGD for MLP; ZOO for trees.
-XGBoost ZOO RI is inflated by degeneracy artefact; Square RI reflects genuine
-vulnerability.  ESI from ZOO inputs; RF\,>\,XGB confirmed under Square Attack
-on Phishing and UNSW-NB15 (see \cref{sec:discussion}).}
+\caption{RI and ESI for all models, datasets, and attacks.
+$^\dagger$FGSM/PGD for MLP; ZOO for trees.  XGBoost ZOO RI is inflated by
+degeneracy artefact; Square Attack RI reflects genuine vulnerability.}
 \label{tab:master}
 \centering
 \small
@@ -571,12 +565,10 @@ recover the attack.
   \includegraphics[width=\textwidth,
     alt={Four-panel figure showing ZOO Robustness Index versus query budget for Random Forest and XGBoost on Phishing and UNSW-NB15 datasets. Top row shows coordinate-sampling ablation (12 to 100 percent of features per call); bottom row shows iterative-step ablation (20 to 200 steps). XGBoost RI remains perfectly flat on Phishing in both ablations, confirming budget-independent degeneracy. RF RI declines monotonically, confirming ZOO effectiveness on smoother surfaces.}
   ]{../figures/zoo_budget_combined.png}
-  \caption{ZOO query-budget ablation.  Top: varying the fraction of features
-  sampled per gradient call (12\%--100\%).  Bottom: varying the number of
-  iterative coordinate-descent steps (20--200, $N_\text{RI}=50$).  XGBoost RI
-  is flat on Phishing in both ablations ($\Delta = 0.000$), confirming
-  budget-independent degeneracy.  RF RI declines with budget, confirming ZOO
-  effectiveness on smoother surfaces.}
+  \caption{ZOO query-budget ablation.  Top: coordinate-sampling fraction
+  (12\%--100\% of features per call).  Bottom: iterative coordinate-descent
+  steps (20--200, $N_\text{RI}=50$).  XGBoost RI is flat on Phishing in both
+  ablations ($\Delta = 0.000$); RF RI declines monotonically.}
   \label{fig:zoo-budget}
 \end{figure}
 
@@ -651,11 +643,8 @@ Attack RI column for a fair robustness comparison.
     alt={Heatmap with models (MLP, Random Forest, XGBoost) on one axis and datasets (Phishing, UNSW-NB15, NF-ToN-IoT) combined with attack methods on the other. Cells show Robustness Index and Explainability Stability Index values. XGBoost shows near-perfect RI under ZOO (0.97 to 0.99) but consistently the lowest ESI (0.06 to 0.16), while Random Forest shows lower RI but higher ESI, illustrating the decoupling between prediction robustness and explanation stability.}
   ]{../figures/master_heatmap.png}
   \caption{RI and ESI heatmap across Phishing, UNSW-NB15, and NF-ToN-IoT
-  (HIKARI-2021 results are in \cref{sec:hikari}).
-  XGBoost ZOO RI\,$\approx$\,0.98 is an artefact of ZOO degeneracy (see
-  \cref{sec:trees}); Square Attack RI reveals genuine vulnerability.
-  Despite this, XGBoost ESI is consistently the lowest of the two tree models,
-  showing that even failed attacks can destabilise explanations.}
+  (HIKARI-2021 in \cref{sec:hikari}).  XGBoost ZOO RI\,$\approx$\,0.98 is a
+  degeneracy artefact; Square Attack RI reflects genuine vulnerability.}
   \label{fig:master_heatmap}
 \end{figure}
 
@@ -686,9 +675,8 @@ high variance.}
 \includegraphics[width=0.85\textwidth,
   alt={Heatmap of per-feature TreeSHAP attribution drift for XGBoost on the Phishing dataset, using the same axis conventions as the Random Forest heatmap. Colour intensity is markedly higher across most features compared to the Random Forest, reflecting XGBoost's lower Explainability Stability Index despite comparable prediction robustness.}
 ]{../figures/treeshap_drift_xgb_phish.png}
-\caption{Per-feature TreeSHAP drift for XGBoost on Phishing.  Despite comparable
-prediction robustness, XGBoost exhibits markedly larger per-feature drift than
-the Random Forest, consistent with its lower ESI.}
+\caption{Per-feature TreeSHAP drift for XGBoost on Phishing.  Same axes as
+\Cref{fig:treeshap-rf-phish}; colour intensity is markedly higher than RF.}
 \label{fig:treeshap-xgb-phish}
 \end{figure}
 
@@ -794,9 +782,8 @@ through targeted augmentation.
   alt={Four panels arranged in a two-by-two grid. Top row: Phishing URL dataset, left panel Random Forest, right panel XGBoost. Bottom row: UNSW-NB15 dataset, left panel Random Forest, right panel XGBoost. Each panel shows two accuracy-versus-epsilon curves: a dashed blue line for the baseline model and a solid orange line for the adversarially trained model. The XGBoost Phishing panel shows the most dramatic shift, with the adversarially trained curve rising from near-random to moderate accuracy across the perturbation range. The UNSW panels show both models avoiding the near-zero accuracy collapse that baseline models exhibit at high epsilon.}
 ]{../figures/advtrain_trees_combined.png}
 \caption{Square Attack accuracy curves before (baseline, dashed blue) and after
-(adv-trained, solid orange) Square Attack data augmentation.
-XGBoost on Phishing gains $+0.383$ RI; RF on UNSW-NB15 gains $+0.156$ RI by
-preventing the accuracy collapse above $\varepsilon=0.167$.}
+(adv-trained, solid orange) augmentation on Phishing and UNSW-NB15.
+Largest gains: XGBoost Phishing $+0.383$ RI, RF UNSW-NB15 $+0.156$ RI.}
 \label{fig:advtrain-trees}
 \end{figure}
 
@@ -854,12 +841,8 @@ ordering should be treated as inconclusive on this dataset.
     alt={Line plots showing adversarial robustness curves for Random Forest and XGBoost on the NF-ToN-IoT dataset under ZOO, Square Attack, and HopSkipJump attacks. Random Forest ZOO accuracy degrades more steeply than on other datasets (Robustness Index 0.679) due to the lower 10-feature dimensionality improving ZOO gradient estimates. XGBoost ZOO remains near-perfect. Square Attack degrades both models to near class-prior accuracy.}
   ]{../figures/toniot_robustness_curves.png}
   \caption{Adversarial robustness curves for RF and XGBoost on NF-ToN-IoT.
-  ZOO shows partial effectiveness against RF (RI\,=\,0.679), plausibly because
-  lower dimensionality (10 features) improves finite-difference gradient
-  estimates---though dimensionality cannot be isolated as the sole cause
-  without a controlled ablation.  HopSkipJump converges close to Square Attack
-  on both models (RI gap $\leq$\,0.06), unlike higher-dimensional datasets where
-  the gap exceeds 0.20.}
+  ZOO is partially effective against RF (RI\,=\,0.679).  HopSkipJump converges
+  close to Square Attack on both models (gap $\leq$\,0.06).}
   \label{fig:toniot}
 \end{figure}
 
@@ -920,10 +903,8 @@ the traffic domain.
     alt={Line plots showing adversarial robustness curves for Random Forest and XGBoost on the HIKARI-2021 dataset under ZOO, Square Attack, and HopSkipJump. XGBoost ZOO accuracy remains flat at near-clean accuracy (RI 0.997), demonstrating ZOO degeneracy. Square Attack reduces XGBoost RI to 0.438, meaning accuracy averaged across the perturbation grid falls below 0.5. Random Forest robustness curves degrade more uniformly across attack methods. HopSkipJump achieves a very high RI for XGBoost (0.894) despite the same dataset, reflecting the difficulty of boundary search in the 83-dimensional feature space.}
   ]{../figures/hikari_robustness_curves.png}
   \caption{Adversarial robustness curves for RF and XGBoost on HIKARI-2021.
-  ZOO degeneracy (XGB RI\,=\,0.997) and Square Attack collapse (XGB RI\,=\,0.438)
-  replicate the pattern from Phishing and UNSW-NB15.  The HSJ--Square gap
-  for XGBoost (0.456) is the largest across all four datasets, consistent with
-  the higher feature dimensionality (83 features) making boundary search harder.}
+  XGB ZOO RI\,=\,0.997 (degeneracy); XGB Square RI\,=\,0.438.
+  HSJ--Square gap for XGBoost (0.456) is the largest across all four datasets.}
   \label{fig:hikari}
 \end{figure}
 
@@ -1077,9 +1058,7 @@ architectural property, not a ZOO artefact.
   ]{../figures/esi_zoo_vs_square_phishing.png}
   \caption{SHAP attribution drift under ZOO and Square Attack on Phishing.
   RF ESI\,=\,0.287 (ZOO) / 0.230 (Square); XGB ESI\,=\,0.111 (ZOO) / 0.117
-  (Square).  The RF\,>\,XGB ordering holds under both attacks, confirming that
-  XGBoost explanation fragility is architectural rather than a ZOO degeneracy
-  artefact.}
+  (Square).  RF\,>\,XGB under both attacks.}
   \label{fig:esi_square}
 \end{figure}
 
@@ -1089,8 +1068,7 @@ architectural property, not a ZOO artefact.
     alt={Two line plots showing mean absolute SHAP attribution drift versus perturbation magnitude for Random Forest (left) and XGBoost (right) on the UNSW-NB15 dataset. Each plot shows two curves: ZOO-based ESI and Square Attack-based ESI. For both models, drift under Square Attack is higher than under ZOO. Random Forest ESI under Square Attack (0.184) exceeds XGBoost ESI (0.155), confirming that the RF greater than XGB ordering is not specific to the Phishing dataset.}
   ]{../figures/esi_zoo_vs_square_unsw.png}
   \caption{SHAP attribution drift under ZOO and Square Attack on UNSW-NB15.
-  RF Square ESI\,=\,0.184; XGB Square ESI\,=\,0.155.  The RF\,>\,XGB ordering
-  holds on a second dataset, corroborating the architectural interpretation.}
+  RF Square ESI\,=\,0.184; XGB Square ESI\,=\,0.155.}
   \label{fig:esi_square_unsw}
 \end{figure}
 
