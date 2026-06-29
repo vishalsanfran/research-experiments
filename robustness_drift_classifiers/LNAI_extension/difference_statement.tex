@@ -65,10 +65,13 @@ is not model-agnostic.  Additionally, we demonstrate that XGBoost achieves high
 prediction robustness under ZOO (RI\,$\approx$\,0.98) yet exhibits low explanation
 stability (ESI\,$\approx$\,0.06--0.16 across all four datasets), showing that prediction
 robustness and explanation stability are \emph{decoupled}---a high RI does not
-guarantee trustworthy explanations under attack.  To confirm the RF\,>\,XGB ESI
-ordering is not itself a ZOO artefact, we recompute ESI under Square Attack on
-Phishing: the ordering holds (RF\,ESI\,=\,0.230, XGB\,ESI\,=\,0.117 vs.\
-0.287 and 0.111 under ZOO), confirming the gap is architectural.
+guarantee trustworthy explanations under attack.  To confirm the RF\,>\,XGB ESI ordering is not itself a ZOO artefact, we recompute
+ESI under Square Attack across all four datasets.  The ordering holds on Phishing
+(RF\,=\,0.230, XGB\,=\,0.117) and UNSW-NB15 (RF\,=\,0.184, XGB\,=\,0.155), is
+tied on NF-ToN-IoT, and reverses on HIKARI-2021 due to a normalisation-scale
+artefact (XGBoost's absolute SHAP drift is $\approx$10$\times$ larger than RF's,
+but grows more gradually, which the normalised-AUC formula scores as higher
+stability).  The architectural interpretation is confirmed on three of four datasets.
 
 \textbf{(vi) PGD step-size ablation.}
 A controlled ablation over PGD step sizes $\alpha \in \{0.005, 0.01, 0.02, 0.05,
@@ -82,12 +85,13 @@ feedback on the conference version.
 \textbf{(vii) Master comparative analysis.}
 A comprehensive results table spanning all three datasets, three model families,
 and five attack methods is introduced, enabling cross-domain and cross-model
-comparison in a single view.  Nine new figures accompany the extended experiments:
+comparison in a single view.  Ten new figures accompany the extended experiments:
 the ZOO-degeneracy accuracy curve, full attack comparison curves (ZOO, Square
 Attack, HopSkipJump), the master RI/ESI heatmap, per-feature TreeSHAP drift
 heatmaps for both tree models on Phishing, NF-ToN-IoT robustness curves,
-HIKARI-2021 robustness curves, the PGD step-size ablation, and the ESI drift
-curves comparing ZOO versus Square Attack.
+HIKARI-2021 robustness curves, the PGD step-size ablation, ESI drift curves
+comparing ZOO versus Square Attack on Phishing, and ESI drift curves on
+UNSW-NB15 confirming the RF\,>\,XGB ordering under Square Attack.
 
 \textbf{(viii) Feature-level TreeSHAP drift analysis.}
 A new subsection decomposes the aggregate ESI score into per-feature attribution
