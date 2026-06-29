@@ -8,10 +8,11 @@ KAGGLE  := $(VENV)/bin/kaggle
 
 help:
 	@echo "Targets:"
-	@echo "  make venv     — create .venv and install dependencies"
-	@echo "  make data     — download datasets via Kaggle CLI"
-	@echo "  make notebook — launch Jupyter from this directory"
-	@echo "  make clean    — remove .venv (data files kept)"
+	@echo "  make venv         — create .venv and install dependencies"
+	@echo "  make data         — download Kaggle datasets (Phishing, UNSW-NB15, NF-ToN-IoT)"
+	@echo "  make data-hikari  — download HIKARI-2021 from Zenodo (no API key required)"
+	@echo "  make notebook     — launch Jupyter from this directory"
+	@echo "  make clean        — remove .venv (data files kept)"
 
 venv: $(VENV)/bin/activate
 
@@ -30,6 +31,13 @@ data: $(VENV)/bin/activate
 	$(KAGGLE) datasets download mrwellsdavid/unsw-nb15 -p . --unzip
 	$(KAGGLE) datasets download dhoogla/nftoniot -p . --unzip
 	@echo "Datasets downloaded."
+
+data-hikari: $(VENV)/bin/activate
+	curl -L --progress-bar -o ALLFLOWMETER_HIKARI2021.csv.zip \
+	    "https://zenodo.org/records/5199540/files/ALLFLOWMETER_HIKARI2021.csv.zip?download=1"
+	unzip -o ALLFLOWMETER_HIKARI2021.csv.zip
+	rm ALLFLOWMETER_HIKARI2021.csv.zip
+	@echo "HIKARI-2021 downloaded: ALLFLOWMETER_HIKARI2021.csv"
 
 notebook: $(VENV)/bin/activate
 	$(JUPYTER) notebook

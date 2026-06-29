@@ -48,10 +48,13 @@ $[0,1]$ scale.  ESI is computed via TreeSHAP~\cite{lundberg2020treeshap} for
 Random Forest and XGBoost, enabling direct cross-model comparison of prediction
 robustness and explanation stability within a single unified framework.
 
-\textbf{(iv) New dataset.}
+\textbf{(iv) New datasets.}
 The NF-ToN-IoT dataset~\cite{sarhan2021nftoniot} (1.16\,M NetFlow~v2 records,
-10 features) is added as a third evaluation domain, covering IoT network intrusion
-detection and providing cross-domain validation of all findings.
+10 features) is added as a third evaluation domain covering IoT network intrusion
+detection.  HIKARI-2021~\cite{ferrag2022hikari} (555{,}278 flows, 83 features)
+is added as a fourth domain covering encrypted TLS/HTTPS traffic detection,
+providing additional cross-domain validation of all findings across structurally
+different feature spaces.
 
 \textbf{(v) New empirical findings.}
 Evaluation reveals that ZOO produces near-degenerate gradient estimates against
@@ -60,7 +63,7 @@ whereas Square Attack reduces XGBoost accuracy to near-random (RI\,=\,0.36 on
 Phishing).  This 0.62 gap exposes a methodological risk: attack-method selection
 is not model-agnostic.  Additionally, we demonstrate that XGBoost achieves high
 prediction robustness under ZOO (RI\,$\approx$\,0.98) yet exhibits low explanation
-stability (ESI\,$\approx$\,0.06--0.16 across datasets), showing that prediction
+stability (ESI\,$\approx$\,0.06--0.16 across all four datasets), showing that prediction
 robustness and explanation stability are \emph{decoupled}---a high RI does not
 guarantee trustworthy explanations under attack.  To confirm the RF\,>\,XGB ESI
 ordering is not itself a ZOO artefact, we recompute ESI under Square Attack on
@@ -79,11 +82,12 @@ feedback on the conference version.
 \textbf{(vii) Master comparative analysis.}
 A comprehensive results table spanning all three datasets, three model families,
 and five attack methods is introduced, enabling cross-domain and cross-model
-comparison in a single view.  Eight new figures accompany the extended experiments:
+comparison in a single view.  Nine new figures accompany the extended experiments:
 the ZOO-degeneracy accuracy curve, full attack comparison curves (ZOO, Square
 Attack, HopSkipJump), the master RI/ESI heatmap, per-feature TreeSHAP drift
-heatmaps for both tree models on Phishing, NF-ToN-IoT robustness curves, the PGD
-step-size ablation, and the ESI drift curves comparing ZOO versus Square Attack.
+heatmaps for both tree models on Phishing, NF-ToN-IoT robustness curves,
+HIKARI-2021 robustness curves, the PGD step-size ablation, and the ESI drift
+curves comparing ZOO versus Square Attack.
 
 \textbf{(viii) Feature-level TreeSHAP drift analysis.}
 A new subsection decomposes the aggregate ESI score into per-feature attribution

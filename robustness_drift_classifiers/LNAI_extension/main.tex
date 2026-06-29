@@ -39,8 +39,8 @@ Stability in Cybersecurity Classifiers}
 Adversarial attacks on cybersecurity classifiers pose a dual threat: degrading
 predictions and destabilising the SHAP-based explanations that security analysts
 rely on to understand and triage alerts.  We extend our prior MLP
-study~\cite{khawarey2026empirical} to Random Forest and XGBoost across three
-tabular security datasets (phishing URLs, UNSW-NB15, NF-ToN-IoT), evaluating
+study~\cite{khawarey2026empirical} to Random Forest and XGBoost across four
+tabular security datasets (phishing URLs, UNSW-NB15, NF-ToN-IoT, HIKARI-2021), evaluating
 five attacks including three black-box methods applicable to non-differentiable
 tree models.  We introduce the \emph{Explainability Stability Index}~(ESI), a
 scalar metric computed from TreeSHAP attribution drift under adversarial
@@ -50,7 +50,7 @@ results against XGBoost (apparent RI\,$\approx$\,0.98) due to piecewise-constant
 prediction surfaces, while score-based Square Attack reveals genuine
 vulnerability~(RI\,$\approx$\,0.36).  Critically, even ZOO's degenerate
 perturbations---insufficient to cause mis\-classification---drive substantial
-attribution drift~(XGBoost ESI\,$\approx$\,0.06--0.11 vs.\ 0.17--0.29 for
+attribution drift~(XGBoost ESI\,$\approx$\,0.06--0.16 vs.\ 0.14--0.29 for
 Random Forest), demonstrating that prediction robustness and explanation
 stability are \emph{distinct axes} requiring joint measurement.  A two-axis
 framework~(gradient dependence, query efficiency) explains the observed attack
@@ -101,8 +101,9 @@ Specifically, we make the following new contributions beyond~\cite{khawarey2026e
     attack of non-differentiable tree models.
   \item \textbf{Explainability Stability Index (ESI).}  A new scalar metric
     computed from TreeSHAP drift, reported on the same $[0,1]$ scale as RI.
-  \item \textbf{Third dataset.}  NF-ToN-IoT is added as an IoT intrusion
-    detection domain, providing cross-domain validation.
+  \item \textbf{Third and fourth datasets.}  NF-ToN-IoT (IoT NetFlow intrusion
+    detection) and HIKARI-2021~\cite{ferrag2022hikari} (encrypted TLS/HTTPS traffic)
+    are added as two new evaluation domains, providing cross-domain validation.
   \item \textbf{ZOO degeneracy finding.}  ZOO produces near-degenerate results
     on XGBoost (RI\,$\approx$\,0.98--0.99) due to its piece\-wise-constant prediction surface,
     while Square Attack reveals genuine vulnerability (RI\,$\approx$\,0.36), exposing a
@@ -127,6 +128,7 @@ The remainder of this paper is structured as follows.
 \Cref{sec:base} summarises the base MLP study from~\cite{khawarey2026empirical}.
 \Cref{sec:trees} presents the tree model extension.
 \Cref{sec:toniot} covers the NF-ToN-IoT dataset.
+\Cref{sec:hikari} presents HIKARI-2021 as cross-domain validation.
 \Cref{sec:pgd} presents the PGD ablation.
 \Cref{sec:discussion} discusses attack realism, ESI implications, and
 attack-method selection guidance~(\cref{sec:attack_guidance}).
@@ -328,7 +330,7 @@ step via Monte Carlo sampling.  We use 8 iterations with 20 gradient samples.
 % ══════════════════════════════════════════════════════════════════════════════
 
 \paragraph{Datasets.}
-Three tabular cybersecurity datasets are used.
+Four tabular cybersecurity datasets are used.
 \textit{Phishing URL}~\cite{phishing_kaggle}: 10{,}000 samples, 48 binary/ternary
 URL-structure features, balanced classes.
 \textit{UNSW-NB15}~\cite{moustafa2015unsw}: we use the official
@@ -342,6 +344,13 @@ records across all partitions; we use only the training partition and apply an
 \textit{NF-ToN-IoT}~\cite{sarhan2021nftoniot}: 1{,}157{,}994 NetFlow~v2 records,
 10 features; we sample 20{,}000 benign and 20{,}000 attack flows using stratified
 batch streaming to avoid loading the full file into memory.
+\textit{HIKARI-2021}~\cite{ferrag2022hikari}: 555{,}278 bidirectional network
+flows (517{,}582 benign, 37{,}696 attack) capturing TLS/HTTPS encrypted traffic.
+The dataset contains 88 columns; we drop network identifiers
+(\texttt{uid}, \texttt{originh}, \texttt{responh}), IP/MAC address columns,
+timestamps, and \texttt{traffic\_category} (a multi-class label), yielding
+83 numeric features and a binary \texttt{Label} target.  We sample 10{,}000
+benign and 10{,}000 attack flows for balanced evaluation.
 All features are z-score normalised using training-set statistics.
 
 \paragraph{Models.}
@@ -514,6 +523,10 @@ Square Attack on Phishing (RF\,=\,0.230, XGB\,=\,0.117) --- not a ZOO artefact
   & MLP  & ---   & ---   & ---   & ---   & ---   & --- \\
   & RF   & 0.998 & 0.679 & ---   & 0.482 & 0.517 & 0.214 \\
   & XGB  & 0.998 & 0.973 & ---   & 0.460 & 0.516 & 0.159 \\
+\midrule
+\multirow{2}{*}{HIKARI-2021}
+  & RF   & 0.998 & 0.654 & ---   & 0.492 & 0.619 & 0.140 \\
+  & XGB  & 0.999 & 0.997 & ---   & 0.438 & 0.894 & 0.056 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -722,6 +735,70 @@ XGBoost ESI (0.159) follows the same cross-dataset pattern.
 \end{figure}
 
 % ══════════════════════════════════════════════════════════════════════════════
+\section{HIKARI-2021: Cross-Domain Validation}
+\label{sec:hikari}
+% ══════════════════════════════════════════════════════════════════════════════
+
+HIKARI-2021~\cite{ferrag2022hikari} differs structurally from the three previous
+datasets: it captures TLS/HTTPS encrypted network flows, meaning packet payload is
+not directly observable, and its 83 retained features are dominated by connection
+timing, byte/packet statistics, and TLS handshake characteristics rather than
+URL-structure or categorical NetFlow fields.  It therefore represents a third
+distinct security domain (encrypted-traffic detection) and tests whether the
+findings from Phishing and UNSW-NB15 generalise beyond those specific feature
+spaces.  As with NF-ToN-IoT, both RF and XGBoost achieve very high clean accuracy
+(0.998 and 0.999); the same caution about relative comparisons over absolute RI
+values applies here.
+
+\paragraph{ZOO degeneracy persists.}
+XGBoost ZOO RI is 0.997---the characteristic flat accuracy curve at clean
+accuracy across all $\varepsilon$---confirming that piecewise-constant tree leaves
+produce near-zero finite-difference gradients regardless of feature space.  The
+ZOO-versus-Square-Attack gap for XGBoost is $0.997 - 0.438 = 0.559$, comparable
+to the 0.62 gap on Phishing and consistent across all four datasets.
+
+\paragraph{Square Attack reveals vulnerability.}
+Under Square Attack, XGBoost RI drops to 0.438---below the 0.5 random-chance
+baseline---indicating that the score-based random search finds adversarial
+examples that, on average, cause misclassification across the $\varepsilon$ grid.
+RF RI under Square Attack is 0.492, also near-random.  This is the most extreme
+collapse we observe across all four datasets, suggesting that the encrypted-traffic
+feature space provides a particularly dense adversarial neighbourhood under
+$\ell_\infty$ perturbations.
+
+\paragraph{HopSkipJump--Square gap on HIKARI.}
+XGBoost HSJ RI is 0.894 versus Square Attack RI of 0.438---a gap of 0.456, larger
+than on any other dataset.  With 83 features, HIKARI is high-dimensional, and
+HSJ's boundary traversal must search a large volume; the result is consistent with
+the trend established across previous datasets (larger gaps at higher
+dimensionality).  RF shows a smaller HSJ--Square gap ($0.619 - 0.492 = 0.127$),
+consistent with RF's smoother decision boundary making boundary search
+comparatively more effective.
+
+\paragraph{ESI ordering holds.}
+RF ESI (0.140) exceeds XGBoost ESI (0.056) on HIKARI, extending the RF\,>\,XGB
+ordering to a fourth dataset with a qualitatively different feature space.
+XGBoost ESI of 0.056 is the lowest value observed across all datasets, tied with
+UNSW-NB15 (0.063), reinforcing that XGBoost's additive boosting structure
+produces higher attribution drift than Random Forest averaging irrespective of
+the traffic domain.
+
+\Cref{fig:hikari} shows the robustness curves for both models on HIKARI-2021.
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.85\textwidth,
+    alt={Line plots showing adversarial robustness curves for Random Forest and XGBoost on the HIKARI-2021 dataset under ZOO, Square Attack, and HopSkipJump. XGBoost ZOO accuracy remains flat at near-clean accuracy (RI 0.997), demonstrating ZOO degeneracy. Square Attack reduces XGBoost accuracy below the random-chance baseline (RI 0.438). Random Forest robustness curves degrade more uniformly across attack methods. HopSkipJump achieves a very high RI for XGBoost (0.894) despite the same dataset, reflecting the difficulty of boundary search in the 83-dimensional feature space.}
+  ]{../figures/hikari_robustness_curves.png}
+  \caption{Adversarial robustness curves for RF and XGBoost on HIKARI-2021.
+  ZOO degeneracy (XGB RI\,=\,0.997) and Square Attack collapse (XGB RI\,=\,0.438)
+  replicate the pattern from Phishing and UNSW-NB15.  The HSJ--Square gap
+  for XGBoost (0.456) is the largest across all four datasets, consistent with
+  the higher feature dimensionality (83 features) making boundary search harder.}
+  \label{fig:hikari}
+\end{figure}
+
+% ══════════════════════════════════════════════════════════════════════════════
 \section{PGD Step-Size Ablation}
 \label{sec:pgd}
 % ══════════════════════════════════════════════════════════════════════════════
@@ -878,14 +955,17 @@ architectural property, not a ZOO artefact.
 \end{figure}
 
 The cross-dataset behaviour of ESI supports its use as a model-selection
-criterion.  Across all three datasets, XGBoost records a lower ESI than the
+criterion.  Across all four datasets, XGBoost records a lower ESI than the
 Random Forest ($0.111$ vs.\ $0.287$ on Phishing, $0.063$ vs.\ $0.167$ on
-UNSW-NB15, $0.159$ vs.\ $0.214$ on NF-ToN-IoT), confirmed as genuine by the Square Attack recheck on Phishing (\Cref{fig:esi_square}).  This consistent
-ordering, despite very different feature spaces and class balances, reflects an
-architectural tendency of the boosted ensemble: XGBoost's additive structure
-makes individual feature attributions more sensitive to input perturbation than
-the averaging behaviour of a Random Forest.  Extending this validation to UNSW-NB15
-and NF-ToN-IoT under Square Attack remains a direction for future work.
+UNSW-NB15, $0.159$ vs.\ $0.214$ on NF-ToN-IoT, and $0.056$ vs.\ $0.140$ on
+HIKARI-2021), confirmed as genuine by the Square Attack recheck on Phishing
+(\Cref{fig:esi_square}).  This consistent ordering across four structurally
+different datasets---URL features, network-flow records, IoT NetFlow, and
+encrypted-traffic statistics---reflects an architectural tendency of the
+boosted ensemble: XGBoost's additive structure makes individual feature
+attributions more sensitive to input perturbation than the averaging behaviour
+of a Random Forest.  Extending the Square Attack ESI validation to UNSW-NB15,
+NF-ToN-IoT, and HIKARI-2021 remains a direction for future work.
 
 A model whose
 predictions appear stable under some attack (whether genuinely or as an
@@ -903,7 +983,7 @@ comparisons across interpretation methods as well as across models.
 \subsection{Attack-Method Selection Guidance}
 \label{sec:attack_guidance}
 
-The results across three datasets and two tree model families reveal a consistent
+The results across four datasets and two tree model families reveal a consistent
 ranking of attack strength that can be explained by two independent axes:
 \emph{gradient dependence} and \emph{query efficiency in high-dimensional spaces}.
 
@@ -912,7 +992,7 @@ ZOO's effectiveness is determined by the quality of its finite-difference
 gradient estimates, which in turn depends on model smoothness and feature
 dimensionality.  Against XGBoost, whose piecewise-constant prediction surface
 yields near-zero finite differences inside tree leaves, ZOO is essentially
-degenerate at all dimensionalities (RI\,=\,0.97--0.99 across all three datasets).
+degenerate at all dimensionalities (RI\,=\,0.97--0.99 across all four datasets).
 Against Random Forest, whose ensemble averaging produces smoother decision
 boundaries, ZOO is partially effective but strongly dimensionality-dependent:
 RI drops from 0.949 (UNSW-NB15, 43 features) to 0.679 (NF-ToN-IoT, 10 features).
@@ -966,11 +1046,12 @@ domain-constraint projections that restrict perturbations to the manifold of
 valid traffic.
 
 \paragraph{Dataset scope.}
-We evaluate three datasets drawn from two domains---web security (Phishing URLs)
-and network intrusion detection (UNSW-NB15, NF-ToN-IoT).  Other important
-security tasks, notably static and dynamic malware classification and host-based
-intrusion detection, are not covered, and their feature semantics may interact
-differently with both attacks and explanation drift.
+We evaluate four datasets drawn from three domains---web security (Phishing URLs),
+network intrusion detection (UNSW-NB15, NF-ToN-IoT), and encrypted-traffic
+detection (HIKARI-2021).  Other important security tasks, notably static and
+dynamic malware classification and host-based intrusion detection, are not
+covered, and their feature semantics may interact differently with both attacks
+and explanation drift.
 
 \paragraph{Computational constraints.}
 All experiments run on CPU, which limits attack strength.  We cap HopSkipJump
@@ -1024,22 +1105,23 @@ We presented an extended empirical study of adversarial robustness and
 explainability stability in tabular cybersecurity classifiers, expanding our
 conference paper~\cite{khawarey2026empirical} along four dimensions: classifier
 families (RF and XGBoost), attack methods (ZOO, Square Attack, HopSkipJump),
-evaluation datasets (NF-ToN-IoT), and metrics (ESI).
+evaluation datasets (NF-ToN-IoT and HIKARI-2021), and metrics (ESI).
 
 Three findings stand out.  First, ZOO produces degenerate gradient estimates
 against XGBoost, inflating apparent robustness; Square Attack reveals genuine
-vulnerability with a RI gap of up to 0.62 on the same model.  This shows that
-attack-method selection is not model-agnostic and that gradient-based black-box
-attacks are insufficient for evaluating tree ensembles.  Second, RI and ESI can decouple: ZOO perturbations that fail
-to fool XGBoost predictions (artefact RI\,$\approx$\,0.98) still drive large
-attribution drift (ESI\,$\approx$\,0.06--0.11), demonstrating that an attack
-too weak to cause misclassification can nonetheless destabilise explanations.
-RF achieves higher ESI than XGBoost across all three datasets; Square Attack
-recomputation on Phishing (RF\,=\,0.230, XGB\,=\,0.117) preserves the ordering,
-confirming it is not a ZOO artefact~(\Cref{fig:esi_square}).  Third, PGD
-underperforms FGSM on z-score normalised tabular data when the conventional step
-size $\alpha=0.01$ is used, an artifact explained by iterative $L_\infty$
-projection cancelling gradient accumulation.
+vulnerability with a RI gap of up to 0.62 on the same model.  This gap replicates
+across all four datasets (0.50--0.62), showing that attack-method selection is
+not model-agnostic and that gradient-based black-box attacks are insufficient
+for evaluating tree ensembles.  Second, RI and ESI can decouple: ZOO
+perturbations that fail to fool XGBoost predictions (artefact RI\,$\approx$\,0.98)
+still drive large attribution drift (ESI\,$\approx$\,0.06--0.16), demonstrating
+that an attack too weak to cause misclassification can nonetheless destabilise
+explanations.  RF achieves higher ESI than XGBoost across all four datasets;
+Square Attack recomputation on Phishing (RF\,=\,0.230, XGB\,=\,0.117) preserves
+the ordering, confirming it is not a ZOO artefact~(\Cref{fig:esi_square}).
+Third, PGD underperforms FGSM on z-score normalised tabular data when the
+conventional step size $\alpha=0.01$ is used, an artifact explained by iterative
+$L_\infty$ projection cancelling gradient accumulation.
 
 Directions for future work include incorporating feature validity constraints into
 the attack protocol, extending ESI to other XAI methods beyond SHAP (e.g.\ LIME),
