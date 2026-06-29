@@ -61,7 +61,12 @@ Evaluation reveals that ZOO produces near-degenerate gradient estimates against
 XGBoost (RI\,$\approx$\,0.98) due to its piecewise-constant prediction surface,
 whereas Square Attack reduces XGBoost accuracy to near-random (RI\,=\,0.36 on
 Phishing).  This 0.62 gap exposes a methodological risk: attack-method selection
-is not model-agnostic.  Additionally, we demonstrate that XGBoost achieves high
+is not model-agnostic.  A query-budget ablation (varying both the fraction of
+features sampled per gradient call from 12\% to 100\%, and the number of
+iterative refinement steps from 20 to 200) confirms that XGBoost ZOO degeneracy
+is budget-invariant on Phishing (RI\,=\,0.970 at all budgets, $\Delta=0.000$),
+establishing it as an intrinsic property of the piecewise-constant surface
+rather than an artefact of the query budget used in the main experiments.  Additionally, we demonstrate that XGBoost achieves high
 prediction robustness under ZOO (RI\,$\approx$\,0.98) yet exhibits low explanation
 stability (ESI\,$\approx$\,0.06--0.16 across all four datasets), showing that prediction
 robustness and explanation stability are \emph{decoupled}---a high RI does not
@@ -71,7 +76,10 @@ ESI under Square Attack across all four datasets.  The ordering holds on Phishin
 tied on NF-ToN-IoT, and reverses on HIKARI-2021 due to a normalisation-scale
 artefact (XGBoost's absolute SHAP drift is $\approx$10$\times$ larger than RF's,
 but grows more gradually, which the normalised-AUC formula scores as higher
-stability).  The architectural interpretation is confirmed on three of four datasets.
+stability).  Under Square Attack the RF\,>\,XGB ordering is confirmed on two of four datasets
+(Phishing, UNSW-NB15), tied on NF-ToN-IoT, and reverses on HIKARI-2021 due to a
+normalisation-scale artefact; the ordering holds on all four datasets under ZOO
+(the attack used to compute the ESI values in the main results table).
 
 \textbf{(vi) PGD step-size ablation.}
 A controlled ablation over PGD step sizes $\alpha \in \{0.005, 0.01, 0.02, 0.05,
@@ -83,30 +91,32 @@ $\alpha \geq 0.05$.  This provides a rigorous empirical response to reviewer
 feedback on the conference version.
 
 \textbf{(vii) Master comparative analysis.}
-A comprehensive results table spanning all three datasets, three model families,
+A comprehensive results table spanning all four datasets, three model families,
 and five attack methods is introduced, enabling cross-domain and cross-model
-comparison in a single view.  Ten new figures accompany the extended experiments:
+comparison in a single view.  Twelve new figures accompany the extended experiments:
 the ZOO-degeneracy accuracy curve, full attack comparison curves (ZOO, Square
-Attack, HopSkipJump), the master RI/ESI heatmap, per-feature TreeSHAP drift
-heatmaps for both tree models on Phishing, NF-ToN-IoT robustness curves,
-HIKARI-2021 robustness curves, the PGD step-size ablation, ESI drift curves
-comparing ZOO versus Square Attack on Phishing, and ESI drift curves on
-UNSW-NB15 confirming the RF\,>\,XGB ordering under Square Attack.
+Attack, HopSkipJump), the master RI/ESI heatmap (Phishing, UNSW-NB15, NF-ToN-IoT),
+per-feature TreeSHAP drift heatmaps for both tree models on Phishing, NF-ToN-IoT
+robustness curves, HIKARI-2021 robustness curves, the PGD step-size ablation, ESI
+drift curves comparing ZOO versus Square Attack on Phishing, ESI drift curves on
+UNSW-NB15 confirming the RF\,>\,XGB ordering under Square Attack,
+the Square Attack adversarial training before/after curves for tree ensembles,
+and the ZOO query-budget ablation (coordinate-sampling and iterative-step variants).
 
 \textbf{(viii) Feature-level TreeSHAP drift analysis.}
 A new subsection decomposes the aggregate ESI score into per-feature attribution
 drift, revealing which feature types drive explanation instability for each model
 family.  The analysis confirms that XGBoost's boosted-additive structure produces
 higher per-feature drift than Random Forest's ensemble averaging, consistent with
-the consistently lower XGBoost ESI observed across all three datasets.
+the consistently lower XGBoost ESI observed across all four datasets.
 
 \textbf{(ix) Attack-method selection guidance.}
 A new discussion section introduces a two-axis framework~(gradient dependence,
-query efficiency) that explains the observed attack ranking across all three
+query efficiency) that explains the observed attack ranking across all four
 datasets and yields concrete practical recommendations: Square Attack should be
 the primary benchmark for tree ensembles; ZOO alone overestimates robustness by
-up to 0.62 RI; adaptive PGD step sizes ($\alpha = \varepsilon/\text{steps}$) are
-recommended for z-score normalised tabular data.
+up to 0.62 RI; adaptive PGD step sizes are recommended for z-score normalised
+tabular data.
 
 \textbf{(x) Variance and significance study.}
 A five-seed variance study (varying train/test split, model initialisation, and
@@ -117,12 +127,26 @@ variance is higher (RF ESI std up to 0.101); the RF\,$>$\,XGB ordering holds in
 all five seeds on UNSW-NB15 and in 4/5 seeds on Phishing and HIKARI-2021, but is
 within noise on NF-ToN-IoT ($0.025 \pm 0.082$).
 
-\textbf{(xi) Limitations section.}
-A dedicated Limitations section discusses five scope constraints absent from the
+\textbf{(xi) Square Attack adversarial training for tree ensembles.}
+As a black-box analogue of MLP FGSM adversarial training, Square Attack data
+augmentation ($25\%$ adversarial ratio at $\varepsilon_{\max}=0.3$) is evaluated
+on Phishing and UNSW-NB15.  The largest beneficiary is XGBoost on Phishing,
+where Square RI rises from $0.372$ to $0.755$ ($+0.383$), nearly closing the gap
+with baseline RF.  RF on UNSW-NB15 improves by $+0.156$, preventing the complete
+accuracy collapse ($0.000$) observed above $\varepsilon=0.167$ in the baseline.
+XGBoost on UNSW-NB15 shows cross-attack transfer ($+0.045$ ZOO, $+0.081$ HSJ),
+while RF on Phishing is slightly degraded ($-0.049$), revealing that augmentation
+at $\varepsilon_{\max}$ can backfire for already-robust models.  Clean accuracy
+cost is at most $0.7\%$ across all conditions.
+
+\textbf{(xii) Limitations section.}
+A dedicated Limitations section discusses six scope constraints absent from the
 conference version: feature-validity constraints on $\ell_\infty$ perturbations
 in structured security data, dataset scope, CPU-only computational budget,
-the approximation of ESI via ZOO-perturbed inputs, and the variance study
-results quantifying which conclusions are statistically robust.
+the approximation of ESI via ZOO-perturbed inputs, the variance study
+results quantifying which conclusions are statistically robust, and the
+scope of tree ensemble defences~(Square Attack augmentation evaluated here;
+other defence strategies remain future work).
 
 All tables, figures, and textual descriptions in this extended version are either
 entirely new or substantially revised.  Results from the conference paper are
