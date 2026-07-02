@@ -12,6 +12,7 @@
 *.toc
 *.synctex.gz
 main.pdf
+beyond_gradient_attacks_rajhans.pdf
 
 # Python environment
 .venv/

@@ -1,0 +1,75 @@
+Statement of Differences Between the Conference Version and the Extended Version
+Mona Rajhans and Vishal Khawarey
+
+The conference paper studied adversarial robustness and SHAP-based explanation
+drift for an MLP on two datasets (phishing URLs, UNSW-NB15) under FGSM and PGD,
+introducing the Robustness Index (RI). This extended version adds well over 30%
+new material across the following contributions.
+
+(i) New classifier families.
+Random Forest and XGBoost are evaluated alongside the MLP across all datasets and
+attacks, representing the tree-ensemble family that dominates production
+cybersecurity deployments.
+
+(ii) New attack methods.
+ZOO, Square Attack, and HopSkipJump extend the evaluation from white-box attacks
+to a model-agnostic black-box framework applicable to non-differentiable tree
+models.
+
+(iii) New metric: Explainability Stability Index (ESI).
+ESI is the complement of the normalised SHAP-drift AUC, on the same [0,1] scale
+as RI. Computed via TreeSHAP for both tree models, it enables direct cross-model
+comparison of explanation stability.
+
+(iv) Two new datasets.
+NF-ToN-IoT (IoT intrusion, 10 features) and HIKARI-2021 (encrypted traffic,
+83 features) extend the study to four datasets across three security domains.
+
+(v) New empirical findings.
+ZOO produces near-degenerate results against XGBoost (RI ~0.98) due to
+piecewise-constant prediction surfaces, while Square Attack reveals genuine
+vulnerability (RI = 0.36 on Phishing) -- a 0.62 gap that depends entirely on
+attack choice. A query-budget ablation confirms the degeneracy is intrinsic to
+the piecewise-constant surface, not a function of query budget: XGBoost RI is
+flat across all budgets on Phishing (delta = 0.000). XGBoost's high ZOO RI
+coexists with low ESI (0.06-0.16 across four datasets), demonstrating that
+prediction robustness and explanation stability are decoupled. The RF > XGB ESI
+ordering holds under ZOO on all four datasets and under Square Attack on Phishing
+and UNSW-NB15.
+
+(vi) PGD step-size ablation.
+A step-size sweep shows the PGD < FGSM anomaly from the conference paper is a
+hyperparameter artefact on z-score normalised data, not a structural property of
+the model.
+
+(vii) Master comparative analysis.
+A single results table spans all four datasets, three model families, and five
+attack methods. Twelve new figures accompany the extended experiments.
+
+(viii) Feature-level TreeSHAP drift.
+Per-feature attribution drift heatmaps show that XGBoost's boosted-additive
+structure produces consistently higher per-feature drift than RF's ensemble
+averaging, which explains the lower XGBoost ESI across all datasets.
+
+(ix) Attack-method selection guidance.
+A two-axis framework (gradient dependence, query efficiency) explains the
+observed attack ranking and yields practical recommendations: Square Attack as the
+primary tree-ensemble benchmark; ZOO alone overestimates robustness by up to 0.62
+RI; adaptive PGD step sizes for z-score normalised data.
+
+(x) Variance study.
+A five-seed study shows the ZOO degeneracy gap is reproducible (mean 0.534-0.575,
+std <= 0.035). ESI variance is higher; the RF > XGB ordering holds in all five
+seeds on UNSW-NB15 and in 4/5 seeds on Phishing and HIKARI-2021, but is within
+noise on NF-ToN-IoT.
+
+(xi) Adversarial training for tree ensembles.
+Square Attack data augmentation raises XGBoost Square RI on Phishing from 0.372
+to 0.755 (+0.383) and RF Square RI on UNSW-NB15 by +0.156. RF on Phishing
+degrades slightly (-0.049), showing that augmentation epsilon should be tuned
+below eps_max for already-robust models.
+
+(xii) Limitations section.
+Six scope constraints are discussed: feature-validity of L-inf perturbations in
+structured security data, dataset scope, CPU-only budget, ESI approximation via
+ZOO inputs, variance results, and tree-ensemble defence scope.
